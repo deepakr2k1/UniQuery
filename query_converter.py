@@ -68,11 +68,34 @@ class GraphSQLToCypher:
                 fields.append(expr.sql())  # e.g. "p.name" or just "p"
         return fields
 
+    def extract_order_by(self):
+        order_expr = self.expression.args.get("order")
+        order_clause = ""
+        if order_expr:
+            order_items = []
+            for e in order_expr.expressions:
+                direction = "ASC"
+                if isinstance(e, exp.Ordered):
+                    direction = "DESC" if e.args.get("desc") else "ASC"
+                    order_items.append(f"{e.this.sql()} {direction}")
+                else:
+                    order_items.append(e.sql())
+            order_clause = "ORDER BY " + ", ".join(order_items)
+        return order_clause
+
+    def extract_limit(self):
+        limit_expr = self.expression.args.get("limit")
+        if limit_expr:
+            return limit_expr.sql()
+        return ""
+
     def generate_cypher(self):
         tables = self.extract_tables()
         joins = self.extract_relationship_joins()
         where_clause = self.extract_where_conditions()
         return_fields = self.extract_return_fields()
+        order_by_clause = self.extract_order_by()
+        limit_clause = self.extract_limit()
 
         if not tables or not joins:
             return "Unsupported query structure for translation."
@@ -88,22 +111,29 @@ class GraphSQLToCypher:
         if where_clause:
             cypher_query += f"\n{where_clause}"
 
-        # Use return fields from SELECT
         if return_fields:
-            cypher_query += f"\nRETURN {', '.join(return_fields)};"
+            cypher_query += f"\nRETURN {', '.join(return_fields)}"
         else:
-            # fallback: return all aliases
-            cypher_query += f"\nRETURN {', '.join([start_node['alias']] + [j['alias'] for j in joins] + [j['target_alias'] for j in joins])};"
+            cypher_query += f"\nRETURN {', '.join([start_node['alias']] + [j['alias'] for j in joins] + [j['target_alias'] for j in joins])}"
 
+        if order_by_clause:
+            cypher_query += f"\n{order_by_clause}"
+
+        if limit_clause:
+            cypher_query += f"\n{limit_clause}"
+
+        cypher_query += ";"
         return cypher_query
 
 # === Example Usage ===
 
 sql_query = """
-SELECT p.name, p.email, p.age
+SELECT p, c.name AS company_name
 FROM Person p
-INNER JOIN Company c ON RELATION(WORKS_AT, w)
-WHERE w.since = 2018 AND c.name = 'Google';
+RIGHT JOIN Company c ON RELATION(WORKS_AT, w)
+WHERE c.name = 'Google' OR c.name = 'Neo4j'
+ORDER BY p.name
+LIMIT 3;
 """
 print("SQL: " + sql_query)
 
