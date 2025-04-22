@@ -31,9 +31,18 @@ class GraphSQLToCypher:
             if isinstance(on_expr, exp.Anonymous) and on_expr.name.lower() == "relation":
                 relation_args = on_expr.expressions
                 if len(relation_args) >= 2:
+                    raw_relation = relation_args[0].sql().strip().replace("'", "").replace('"', '')
+
+                    # Replace ' OR ' / 'or' with |
+                    relation_part = raw_relation.replace(" OR ", "|").replace(" or ", "|")
+
+                    # Cypher allows depth inside [] if there is a pattern like FRIEND*1..3
+                    # No extra wrapping needed, as Cypher syntax expects: :FRIEND*1..3
+                    alias_name = relation_args[1].sql()
+
                     joins.append({
-                        "relationship": relation_args[0].sql(),
-                        "alias": relation_args[1].sql(),
+                        "relationship": relation_part,
+                        "alias": alias_name,
                         "target_table": join.this.name,
                         "target_alias": join.this.alias_or_name
                     })
@@ -87,27 +96,18 @@ class GraphSQLToCypher:
         if not tables:
             return "Unsupported query: No table found."
 
-        # Build MATCH clauses individually
-        match_clauses = []
-        start_node = tables[0]
-        previous_alias = start_node['alias']
-
-        match_clauses.append(f"({previous_alias}:{start_node['label']})")
-
+        # Build MATCH path
+        match_clause = f"({tables[0]['alias']}:{tables[0]['label']})"
         for join in joins:
-            pattern = f"-[{join['alias']}:{join['relationship']}]->({join['target_alias']}:{join['target_table']})"
-            match_clauses.append(pattern)
-            previous_alias = join['target_alias']
+            match_clause += f"-[{join['alias']}:{join['relationship']}]->({join['target_alias']}:{join['target_table']})"
 
-        # Merge into single MATCH statement
-        cypher_query = f"MATCH {''.join(match_clauses)}"
-
+        cypher_query = f"MATCH {match_clause}"
         if where_clause:
             cypher_query += f"\n{where_clause}"
         if return_fields:
             cypher_query += f"\nRETURN {', '.join(return_fields)}"
         else:
-            all_aliases = [start_node['alias']] + [j['alias'] for j in joins] + [j['target_alias'] for j in joins]
+            all_aliases = [tables[0]['alias']] + [j['alias'] for j in joins] + [j['target_alias'] for j in joins]
             cypher_query += f"\nRETURN {', '.join(all_aliases)}"
         if order_by_clause:
             cypher_query += f"\n{order_by_clause}"
@@ -121,9 +121,9 @@ class GraphSQLToCypher:
 sql_query = """
 SELECT p.name as person_name, f.name as friend_name, c.name AS company_name
 FROM Person p
-RIGHT JOIN Person f ON RELATION(FRIEND | COLLEAGUE, _f)
+RIGHT JOIN Person f ON RELATION('FRIEND*..3', _f)
 RIGHT JOIN Company c ON RELATION(WORKS_AT, w)
-WHERE c.name = 'Google'
+WHERE c.name = 'ACME Corp' AND p.name != f.name
 ORDER BY p.name;
 """
 
