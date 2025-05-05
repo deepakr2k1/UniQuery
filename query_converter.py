@@ -58,6 +58,7 @@ class GraphSQLToCypher:
 
     def extract_return_fields(self):
         select_exprs = self.expression.args.get("expressions")
+        is_distinct = self.expression.args.get("distinct", False)
         fields = []
         if select_exprs:
             for expr in select_exprs:
@@ -65,7 +66,7 @@ class GraphSQLToCypher:
                     fields.append(f"{expr.this.sql()} AS {expr.alias_or_name}")
                 else:
                     fields.append(expr.sql())
-        return fields
+        return fields, is_distinct
 
     def extract_order_by(self):
         order_expr = self.expression.args.get("order")
@@ -89,7 +90,7 @@ class GraphSQLToCypher:
         tables = self.extract_tables()
         joins = self.extract_relationship_joins()
         where_clause = self.extract_where_conditions()
-        return_fields = self.extract_return_fields()
+        return_fields, is_distinct = self.extract_return_fields()
         order_by_clause = self.extract_order_by()
         limit_clause = self.extract_limit()
 
@@ -105,10 +106,12 @@ class GraphSQLToCypher:
         if where_clause:
             cypher_query += f"\n{where_clause}"
         if return_fields:
-            cypher_query += f"\nRETURN {', '.join(return_fields)}"
+            distinct_keyword = "DISTINCT " if is_distinct else ""
+            cypher_query += f"\nRETURN {distinct_keyword}{', '.join(return_fields)}"
         else:
             all_aliases = [tables[0]['alias']] + [j['alias'] for j in joins] + [j['target_alias'] for j in joins]
-            cypher_query += f"\nRETURN {', '.join(all_aliases)}"
+            distinct_keyword = "DISTINCT " if is_distinct else ""
+            cypher_query += f"\nRETURN {distinct_keyword}{', '.join(all_aliases)}"
         if order_by_clause:
             cypher_query += f"\n{order_by_clause}"
         if limit_clause:
@@ -119,9 +122,9 @@ class GraphSQLToCypher:
 # === Example Usage ===
 
 sql_query = """
-SELECT p.name as person_name, f.name as friend_name, c.name AS company_name
+SELECT DISTINCT p.name as person_name, f.name as friend_name, c.name AS company_name
 FROM Person p
-RIGHT JOIN Person f ON RELATION('FRIEND*..3', _f)
+RIGHT JOIN Person f ON RELATION('FRIEND*3..3', _f)
 RIGHT JOIN Company c ON RELATION(WORKS_AT, w)
 WHERE c.name = 'ACME Corp' AND p.name != f.name
 ORDER BY p.name;
