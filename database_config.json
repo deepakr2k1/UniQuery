@@ -1,0 +1,16 @@
+{
+    "graph": {
+        "type": "neo4j",
+        "uri": "neo4j+s://d548bc3f.databases.neo4j.io",
+        "username": "neo4j",
+        "password": "ueuvUU9i88g-viAppXOHDLkhSy3yZ2Wg7CBmiHiqXvo"
+    },
+    "mysql": {
+        "type": "mysql",
+        "host": "127.0.0.1",
+        "port": 3306,
+        "username": "root",
+        "password": "my-secret-pw",
+        "database": "EMPLOYEE_LOGS"
+    }
+}

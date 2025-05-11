@@ -1,13 +1,13 @@
 from sqlglot import expressions as exp, parse_one
 from neo4j_connector import Neo4jConnector
 
-# Connection details
-URI = "neo4j+s://d548bc3f.databases.neo4j.io"
-USERNAME = "neo4j"
-PASSWORD = "ueuvUU9i88g-viAppXOHDLkhSy3yZ2Wg7CBmiHiqXvo"
+# # Connection details
+# URI = "neo4j+s://d548bc3f.databases.neo4j.io"
+# USERNAME = "neo4j"
+# PASSWORD = "ueuvUU9i88g-viAppXOHDLkhSy3yZ2Wg7CBmiHiqXvo"
 
-# Initialize connector
-neo4j = Neo4jConnector(URI, USERNAME, PASSWORD)
+# # Initialize connector
+# neo4j = Neo4jConnector(URI, USERNAME, PASSWORD)
 
 class GraphSQLToCypher:
     def __init__(self, sql_query):
@@ -121,19 +121,19 @@ class GraphSQLToCypher:
 
 # === Example Usage ===
 
-sql_query = """
-SELECT DISTINCT p.name as person_name, f.name as friend_name, c.name AS company_name
-FROM Person p
-RIGHT JOIN Person f ON RELATION('FRIEND*3..3', _f)
-RIGHT JOIN Company c ON RELATION(WORKS_AT, w)
-WHERE c.name = 'ACME Corp' AND p.name != f.name
-ORDER BY p.name;
-"""
+# sql_query = """
+# SELECT DISTINCT p.name as person_name, f.name as friend_name, c.name AS company_name
+# FROM Person p
+# RIGHT JOIN Person f ON RELATION('FRIEND*3..3', _f)
+# RIGHT JOIN Company c ON RELATION(WORKS_AT, w)
+# WHERE c.name = 'ACME Corp' AND p.name != f.name
+# ORDER BY p.name;
+# """
 
-print("SQL: " + sql_query)
+# print("SQL: " + sql_query)
 
-translator = GraphSQLToCypher(sql_query)
-cypher_query = translator.generate_cypher()
-print("Cypher:\n" + cypher_query)
+# translator = GraphSQLToCypher(sql_query)
+# cypher_query = translator.generate_cypher()
+# print("Cypher:\n" + cypher_query)
 
-neo4j.run_query(cypher_query)
+# neo4j.run_query(cypher_query)

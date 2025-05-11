@@ -34,5 +34,4 @@ class Neo4jConnector:
             headers = flat_records[0].keys()
             rows = [list(r.values()) for r in flat_records]
 
-            print("\n Query Results from Neo4j: ")
-            print(tabulate(rows, headers=headers, tablefmt="fancy_grid"))
+            return tabulate(rows, headers=headers, tablefmt="fancy_grid")
