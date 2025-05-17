@@ -1,18 +1,50 @@
 import cmd
 import argparse
 import shlex
+import sys
+import logging
 from pyfiglet import Figlet
 from neo4j_connector import Neo4jConnector
 from mysql_connector import MySQLConnector
 from query_converter import GraphSQLToCypher
 from config_manager import ConfigManager
-from prompt_toolkit import prompt
+from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
+from rich.text import Text
 
-class HybridQueryEngineCLI(cmd.Cmd):
+class UniQuery(cmd.Cmd):
     def __init__(self):
         super().__init__()
-        self.f = Figlet(font='slant') #Rich
-        self.intro = self.f.renderText('Hybrid Query Engine')
+        console = Console(width=100)
+
+        project_name = "UniQuery"
+        project_version = "1.0.0"
+        author = "Deepak Rathore"
+        description = "This tool transform SQL queries into Cypher, document, key-value, and other query languages, unlocking seamless access to diverse databases through one powerful interface."
+        try:
+            figlet = Figlet(font='slant')
+            figlet_text = figlet.renderText('Uni Query')
+            figlet_text_object = Text(figlet_text, style="green", justify="center")
+
+            if sys.stdin.isatty():
+                console.clear()
+            console.print(figlet_text_object)
+            console.print(Panel(description, title="Project Description", subtitle=project_version))
+
+            table = Table(title="\nProject Details", show_header=True, header_style="bold magenta")
+            table.add_column("Key", style="magenta", no_wrap=True)
+            table.add_column("Value", style="green")
+            table.add_row("Name", project_name)
+            table.add_row("Version", project_version)
+            table.add_row("Author", author)
+            table.add_row("Description", description)
+            console.print(table)
+        except Exception as e:
+            print("UI initialization failed.")
+
+        # Set CLI properties
+        self.intro = ''  # Clear intro to prevent double printing
         self.prompt = "HQE > "
         self.config_manager = ConfigManager()
         self.neo4j_connector = None
@@ -337,4 +369,4 @@ class HybridQueryEngineCLI(cmd.Cmd):
                 print(f"Error executing query: {e}")
 
 if __name__ == '__main__':
-    HybridQueryEngineCLI().cmdloop()
+    UniQuery().cmdloop()
