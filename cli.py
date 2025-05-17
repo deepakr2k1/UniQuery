@@ -11,7 +11,7 @@ from prompt_toolkit import prompt
 class HybridQueryEngineCLI(cmd.Cmd):
     def __init__(self):
         super().__init__()
-        self.f = Figlet(font='slant')
+        self.f = Figlet(font='slant') #Rich
         self.intro = self.f.renderText('Hybrid Query Engine')
         self.prompt = "HQE > "
         self.config_manager = ConfigManager()
@@ -33,9 +33,9 @@ class HybridQueryEngineCLI(cmd.Cmd):
         print("  info         - Show this help message")
         print("  exit         - Exit the application")
 
-    def do_dbalias(self, arg):
+    def do_alias(self, arg):
         if not arg:
-            print("""Please provide one of these subcommand to db_alias
+            print("""Please provide one of these subcommand to alias
                   1. list
                   2. add <alias>
                   3. edit <alias>
@@ -55,6 +55,8 @@ class HybridQueryEngineCLI(cmd.Cmd):
                 self.edit_alias(parts[1], parts[2:])
             case 'delete':
                 self.delete_alias(parts[1])
+            case 'use':
+                self.use_alias(parts[1])
             case _:
                 print("Invalid command. Use: add, edit, delete, or list")
     
@@ -262,6 +264,77 @@ class HybridQueryEngineCLI(cmd.Cmd):
     def do_EOF(self, arg):
         """Handle Ctrl+D"""
         return self.do_exit(arg)
+
+    def use_alias(self, alias):
+        """Use a saved database alias to establish a connection"""
+        config = self.config_manager.get_config(alias)
+        if not config:
+            print(f"No configuration found for alias '{alias}'")
+            return
+
+        db_type = config.get('type')
+        try:
+            if db_type == 'neo4j':
+                connector = Neo4jConnector(config['uri'], config['username'], config['password'])
+            elif db_type == 'mysql':
+                connector = MySQLConnector(config['host'], config['port'], config['username'], config['password'], config.get('database'))
+            else:
+                print(f"Unsupported database type '{db_type}' for alias '{alias}'")
+                return
+            # Do not close here, keep connection open for queries
+            # connector.close()
+        except Exception as e:
+            print(f"Failed to connect using alias '{alias}': {e}")
+            return
+
+        # Close previous connection if any
+        if self.current_alias and self.current_alias in self.connections:
+            self.connections[self.current_alias]['connector'].close()
+            del self.connections[self.current_alias]
+
+        # Store new connection
+        self.connections[alias] = {'connector': connector, 'type': db_type}
+        self.current_alias = alias
+        self.current_db_type = db_type
+        self.run_query_prompt(alias)
+
+    def run_query_prompt(self, alias):
+        """Prompt user to enter queries and execute them on current connection"""
+        print(f"Entering query mode for alias '{alias}'. Type 'exit' or 'quit' to leave.")
+        self.prompt = f"{alias} > "
+        if not self.current_alias or self.current_alias not in self.connections:
+            print("No active database connection. Use 'use_alias <alias>' to connect.")
+            return
+
+        connector = self.connections[self.current_alias]['connector']
+        db_type = self.current_db_type
+
+        while True:
+            try:
+                query = input(self.prompt).strip()
+                if query.lower() in ('exit', 'quit'):
+                    self.prompt = "HQE > "
+                    print("Exiting query mode.")
+                    break
+                if not query:
+                    continue
+
+                if db_type == 'neo4j':
+                    translator = GraphSQLToCypher(query)
+                    cypher_query = translator.generate_cypher()
+                    print(cypher_query)
+                    # Execute Cypher query
+                    result = connector.run_query(cypher_query)
+                    print(result)
+                elif db_type == 'mysql':
+                    # Execute SQL query
+                    result = connector.run_query(query)
+                    print(result)
+                else:
+                    print(f"Unsupported database type '{db_type}'")
+            except Exception as e:
+                self.prompt = "HQE > "
+                print(f"Error executing query: {e}")
 
 if __name__ == '__main__':
     HybridQueryEngineCLI().cmdloop()
