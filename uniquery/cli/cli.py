@@ -3,16 +3,15 @@ import argparse
 import shlex
 import sys
 from pyfiglet import Figlet
-from neo4j_connector import Neo4jConnector
-from mysql_connector import MySQLConnector
-from query_converter import GraphSQLToCypher
-from config_manager import ConfigManager
+from uniquery.connectors import Neo4jConnector, MySQLConnector
+from uniquery.translators import QueryTranslator
+from uniquery.utils.config_manager import ConfigManager
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-class UniQuery(cmd.Cmd):
+class UniQueryCLI(cmd.Cmd):
     def __init__(self):
         super().__init__()
         console = Console(width=100)
@@ -20,7 +19,8 @@ class UniQuery(cmd.Cmd):
         project_name = "UniQuery"
         project_version = "1.0.0"
         author = "Deepak Rathore"
-        description = "This tool transform SQL queries into Cypher, document, key-value, and other query languages, unlocking seamless access to diverse databases through one powerful interface."
+        description = ("This tool transform SQL queries into Cypher, document, key-value, and other query languages, "
+                       "unlocking seamless access to diverse databases through one powerful interface.")
         try:
             figlet = Figlet(font='slant')
             figlet_text = figlet.renderText('Uni Query')
@@ -50,6 +50,7 @@ class UniQuery(cmd.Cmd):
         self.mysql_connector = None
         self.current_alias = None
         self.current_db_type = None
+        self.translator = QueryTranslator()
         # Store active connections
         self.connections = {}
 
@@ -341,15 +342,14 @@ class UniQuery(cmd.Cmd):
             try:
                 query = input(self.prompt).strip()
                 if query.lower() in ('exit', 'quit'):
-                    self.prompt = "HQE > "
                     print("Exiting query mode.")
+                    self.prompt = "UniQuery > "
                     break
                 if not query:
                     continue
 
                 if db_type == 'neo4j':
-                    translator = GraphSQLToCypher(query)
-                    cypher_query = translator.generate_cypher()
+                    cypher_query = self.translator.translate(query, "CYPHER")
                     print(f"Translated Cypher Query: {cypher_query}")
                     # Execute Cypher query
                     result = connector.run_query(cypher_query)
@@ -361,8 +361,8 @@ class UniQuery(cmd.Cmd):
                 else:
                     print(f"Unsupported database type '{db_type}'")
             except Exception as e:
-                self.prompt = "HQE > "
+                self.prompt = "UniQuery > "
                 print(f"Error executing query: {e}")
 
 if __name__ == '__main__':
-    UniQuery().cmdloop()
+    UniQueryCLI().cmdloop()
