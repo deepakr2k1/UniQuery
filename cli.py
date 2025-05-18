@@ -2,7 +2,6 @@ import cmd
 import argparse
 import shlex
 import sys
-import logging
 from pyfiglet import Figlet
 from neo4j_connector import Neo4jConnector
 from mysql_connector import MySQLConnector
@@ -45,7 +44,7 @@ class UniQuery(cmd.Cmd):
 
         # Set CLI properties
         self.intro = ''  # Clear intro to prevent double printing
-        self.prompt = "HQE > "
+        self.prompt = "UniQuery > "
         self.config_manager = ConfigManager()
         self.neo4j_connector = None
         self.mysql_connector = None
@@ -303,7 +302,6 @@ class UniQuery(cmd.Cmd):
         if not config:
             print(f"No configuration found for alias '{alias}'")
             return
-
         db_type = config.get('type')
         try:
             if db_type == 'neo4j':
@@ -318,12 +316,10 @@ class UniQuery(cmd.Cmd):
         except Exception as e:
             print(f"Failed to connect using alias '{alias}': {e}")
             return
-
         # Close previous connection if any
         if self.current_alias and self.current_alias in self.connections:
             self.connections[self.current_alias]['connector'].close()
             del self.connections[self.current_alias]
-
         # Store new connection
         self.connections[alias] = {'connector': connector, 'type': db_type}
         self.current_alias = alias
@@ -354,7 +350,7 @@ class UniQuery(cmd.Cmd):
                 if db_type == 'neo4j':
                     translator = GraphSQLToCypher(query)
                     cypher_query = translator.generate_cypher()
-                    print(cypher_query)
+                    print(f"Translated Cypher Query: {cypher_query}")
                     # Execute Cypher query
                     result = connector.run_query(cypher_query)
                     print(result)
