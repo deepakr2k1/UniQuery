@@ -3,7 +3,7 @@ import argparse
 import shlex
 import sys
 from pyfiglet import Figlet
-from uniquery.connectors import Neo4jConnector, MySQLConnector
+from uniquery.connectors import Neo4jConnector, MySQLConnector, MongoDBConnector
 from uniquery.translators import QueryTranslator
 from uniquery.utils.config_manager import ConfigManager
 from rich.console import Console
@@ -118,7 +118,7 @@ class UniQueryCLI(cmd.Cmd):
     # Add Database Alias 
     def add_alias(self, alias, args):
         parser = argparse.ArgumentParser(description='Database connection arguments')
-        parser.add_argument('--type', choices=['neo4j', 'mysql'], help='Database type')
+        parser.add_argument('--type', choices=['neo4j', 'mysql', 'mongodb'], help='Database type')
         parser.add_argument('--host', help='Database host')
         parser.add_argument('--port', type=int, help='Database port')
         parser.add_argument('--uri', help='Database URI')
@@ -131,7 +131,7 @@ class UniQueryCLI(cmd.Cmd):
 
             # Validate required arguments
             if not parsed_args.type:
-                print("Please specify database type using --type [neo4j|mysql]")
+                print("Please specify database type using --type [neo4j|mysql|mongodb]")
                 return
 
             if parsed_args.type == 'neo4j' and not parsed_args.uri:
@@ -139,6 +139,9 @@ class UniQueryCLI(cmd.Cmd):
                 return
             elif parsed_args.type == 'mysql' and not (parsed_args.host and parsed_args.port):
                 print("For MySQL, please provide --host and --port")
+                return
+            elif parsed_args.type == 'mongodb' and not (parsed_args.host and parsed_args.port):
+                print("For MongoDB, please provide --host and --port")
                 return
 
             if not parsed_args.username:
@@ -172,6 +175,20 @@ class UniQueryCLI(cmd.Cmd):
                         return
                     config = {
                         'type': 'mysql',
+                        'host': parsed_args.host,
+                        'port': parsed_args.port,
+                        'username': parsed_args.username,
+                        'password': parsed_args.password
+                    }
+                case 'mongodb':
+                    try:
+                        test_connector = MongoDBConnector(parsed_args.host, parsed_args.port, parsed_args.username, parsed_args.password, parsed_args.database)
+                        test_connector.close()
+                    except Exception as e:
+                        print(f"Failed to connect to MongoDB: {e}")
+                        return
+                    config = {
+                        'type': 'mongodb',
                         'host': parsed_args.host,
                         'port': parsed_args.port,
                         'username': parsed_args.username,
@@ -225,6 +242,9 @@ class UniQueryCLI(cmd.Cmd):
             elif type == 'mysql' and not (host and port):
                 print("For MySQL, please provide --host and --port")
                 return
+            elif type == 'mongodb' and not (host and port):
+                print("For MongoDB, please provide --host and --port")
+                return
 
             if not username:
                 print("Please provide --username")
@@ -261,6 +281,20 @@ class UniQueryCLI(cmd.Cmd):
                         'port': port,
                         'username': username,
                         'password': password
+                    }
+                case 'mongodb':
+                    try:
+                        test_connector = MongoDBConnector(host, port, username, password, database)
+                        test_connector.close()
+                    except Exception as e:
+                        print(f"Failed to connect to MongoDB: {e}")
+                        return
+                    config = {
+                        'type': 'mongodb',
+                        'host': parsed_args.host,
+                        'port': parsed_args.port,
+                        'username': parsed_args.username,
+                        'password': parsed_args.password
                     }
 
             # Save the database alias and its configuration
@@ -309,6 +343,8 @@ class UniQueryCLI(cmd.Cmd):
                 connector = Neo4jConnector(config['uri'], config['username'], config['password'])
             elif db_type == 'mysql':
                 connector = MySQLConnector(config['host'], config['port'], config['username'], config['password'], config.get('database'))
+            elif db_type == 'mongodb':
+                connector = MongoDBConnector(config['host'], config['port'], config['username'], config['password'], config.get('database'))
             else:
                 print(f"Unsupported database type '{db_type}' for alias '{alias}'")
                 return
@@ -358,11 +394,14 @@ class UniQueryCLI(cmd.Cmd):
                     # Execute SQL query
                     result = connector.run_query(query)
                     print(result)
+                elif db_type == 'mongodb':
+                    mql_query = self.translator.translate(query, "MQL")
+                    print(f"Translated MQL Query: {mql_query}")
+                    # Execute SQL query
+                    result = connector.run_query(mql_query)
+                    print(result)
                 else:
                     print(f"Unsupported database type '{db_type}'")
             except Exception as e:
                 self.prompt = "UniQuery > "
                 print(f"Error executing query: {e}")
-
-if __name__ == '__main__':
-    UniQueryCLI().cmdloop()

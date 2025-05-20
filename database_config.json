@@ -12,5 +12,13 @@
         "username": "root",
         "password": "my-secret-pw",
         "database": "EMPLOYEE_LOGS"
+    },
+    "mongo": {
+        "type": "mongodb",
+        "host": "127.0.0.1",
+        "port": 27017,
+        "username": "admin",
+        "password": "admin123",
+        "database": "test"
     }
 }

@@ -22,7 +22,7 @@ class MySQLConnector:
         try:
             self.cursor.execute(query)
             results = self.cursor.fetchall()
-            
+
             if not results:
                 print("\nNo records found.")
                 return
@@ -30,6 +30,6 @@ class MySQLConnector:
             headers = results[0].keys()
             rows = [list(r.values()) for r in results]
             return tabulate(rows, headers=headers, tablefmt="fancy_grid")
-            
+
         except mysql.connector.Error as err:
-            raise Exception(f"MySQL Error: {str(err)}") 
+            raise Exception(f"MySQL Error: {str(err)}")
