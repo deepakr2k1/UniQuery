@@ -2,7 +2,7 @@ import json
 from pymongo import MongoClient
 from tabulate import tabulate
 
-class MongoDBConnector:
+class MongoDBConnector():
     def __init__(self, host, port, username, password, database=None, auth_source="admin"):
         uri = f"mongodb://{username}:{password}@{host}:{port}/"
         uri += f"?authSource={auth_source}"

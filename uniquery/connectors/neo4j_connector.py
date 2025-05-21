@@ -1,7 +1,7 @@
 from neo4j import GraphDatabase
 from tabulate import tabulate
 
-class Neo4jConnector:
+class Neo4jConnector():
     def __init__(self, uri, username, password):
         self.driver = GraphDatabase.driver(uri, auth=(username, password))
 

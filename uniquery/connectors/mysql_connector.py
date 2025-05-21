@@ -1,7 +1,7 @@
 import mysql.connector
 from tabulate import tabulate
 
-class MySQLConnector:
+class MySQLConnector():
     def __init__(self, host, port, username, password, database=None):
         self.connection = mysql.connector.connect(
             host=host,

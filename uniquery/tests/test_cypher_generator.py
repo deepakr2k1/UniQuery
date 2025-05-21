@@ -1,5 +1,5 @@
 import unittest
-from uniquery.translators.query_translator import QueryTranslator
+from uniquery.query_engine.translators import QueryTranslator
 
 class TestCypherGenerator(unittest.TestCase):
     def setUp(self):

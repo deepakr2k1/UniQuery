@@ -5,6 +5,9 @@ This package contains utility modules and classes for the Uniquery application:
 - ConfigManager: Handles database configuration storage and management
 """
 
-from .config_manager import ConfigManager
+ALIAS_CONNECTION_DETAILS_PATH = 'alias_connection_details.json'
 
-__all__ = ['ConfigManager']
+
+from .main import ConnectionDetailsManager
+
+__all__ = ['ConnectionDetailsManager']

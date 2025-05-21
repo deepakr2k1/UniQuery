@@ -1,9 +1,10 @@
 import json
 import os
 from typing import Dict, Optional
+from uniquery.connection_details_manager import ALIAS_CONNECTION_DETAILS_PATH
 
-class ConfigManager:
-    def __init__(self, config_file: str = "database_config.json"):
+class ConnectionDetailsManager:
+    def __init__(self, config_file: str = ALIAS_CONNECTION_DETAILS_PATH):
         self.config_file = config_file
         self.configs: Dict[str, dict] = {}
         self.load_configs()
