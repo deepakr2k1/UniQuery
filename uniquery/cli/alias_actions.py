@@ -248,6 +248,8 @@ def run_query_prompt(self, alias):
     connector = self.active_connection['connector']
     db_type = self.active_connection['connector_type']
 
+    queryEngine = QueryEngine(db_type, connector)
+
     while True:
         try:
             query = input(self.prompt).strip()
@@ -255,10 +257,37 @@ def run_query_prompt(self, alias):
                 print("Exiting query mode.")
                 self.prompt = "UniQuery > "
                 break
+
             if not query:
                 continue
 
-            queryEngine = QueryEngine(db_type, connector)
+            splitted_query = query.lower().split(" ")
+
+            if splitted_query[0] == 'set_native':
+                if len(splitted_query) != 2:
+                    print("Invalid syntax. Usage: set_native <true|false>")
+                    continue
+                elif splitted_query[1] not in ('true', 'false'):
+                    print("Invalid syntax. Usage: set_native <true|false>")
+                    continue
+                else:
+                    queryEngine.set_is_native_mode(splitted_query[1] == 'true')
+                    print(
+                        f"Native mode is {'enabled' if queryEngine.is_native_mode else 'disabled'}."
+                    )
+                continue
+
+            if splitted_query[0] == 'set_output':
+                if len(splitted_query) != 2:
+                    print("Invalid syntax. Usage: set_output <table|json|raw>")
+                    continue
+                elif splitted_query[1] not in ('table', 'json', 'raw'):
+                    print("Invalid output format. Choose from: table, json, raw")
+                    continue
+                else:
+                    queryEngine.set_output_format(splitted_query[1])
+                    print(f"Output format set to '{splitted_query[1]}'")
+                continue
 
             result = queryEngine.execute_query(query)
             print(result)

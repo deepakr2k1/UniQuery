@@ -24,9 +24,9 @@ def get_connection(connection_details):
         )
     elif connection_details['type'] == "neo4j":
         connector = Neo4jConnector(
-            connection_details['host'],
-            connection_details['port'],
-            connection_details['uri']
+            connection_details['uri'],
+            connection_details['username'],
+            connection_details['password']
         )
     else:
         raise ValueError(f"Unsupported connector type: {connection_details['type']}")
