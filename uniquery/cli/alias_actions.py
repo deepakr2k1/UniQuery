@@ -292,7 +292,6 @@ def run_query_prompt(self, alias):
                 handle_query_execution(query, query_engine)
 
         except Exception as e:
-            self.prompt = "UniQuery > "
             Console.error(f"Error executing query: {e}")
 
     Console.out("Exiting query mode.")

@@ -21,45 +21,32 @@ class QueryGenerator:
 
         # Handle where clause
         if where_clause:
-            # Strip "WHERE" and convert to dict format
-            filter_condition = where_clause.replace("WHERE ", "")
+            # Strip "WHERE" and parse the condition
+            condition = where_clause.replace("WHERE ", "").strip()
 
-            # Handle common operators
-            operators = {
-                "==": "$eq",
-                "!=": "$ne",
-                ">": "$gt",
-                "<": "$lt",
-                ">=": "$gte",
-                "<=": "$lte",
-                "IN": "$in",
-                "NOT IN": "$nin",
-                "LIKE": "$regex",
-                "AND": "$and",
-                "OR": "$or",
-                "CONTAINS": "$in",
-                "STARTS WITH": {"$regex": "^"},
-                "ENDS WITH": {"$regex": "$"},
-                "BETWEEN": "$and",
-                "IS NULL": {"$exists": False},
-                "IS NOT NULL": {"$exists": True}
-            }
-            # Replace SQL operators with MongoDB operators
-            for sql_op, mongo_op in operators.items():
-                if isinstance(mongo_op, str):
-                    filter_condition = filter_condition.replace(sql_op, mongo_op)
-                elif isinstance(mongo_op, dict):
-                    # Handle special cases that need full operator replacement
-                    if sql_op in filter_condition:
-                        field = filter_condition.split(sql_op)[0].strip()
-                        filter_condition = {field: mongo_op}
-
-            # Handle special LIKE patterns
-            if "$regex" in filter_condition:
-                filter_condition = filter_condition.replace("%", ".*")
-                filter_condition = filter_condition.replace("_", ".")
-
-            query["filter"] = {"$expr": {"$eq": [True, filter_condition]}}
+            # Basic parser for simple binary conditions like "age >= 22"
+            import re
+            match = re.match(r"(\w+)\s*(>=|<=|!=|=|<|>)\s*(.+)", condition)
+            if match:
+                field, operator, value = match.groups()
+                operator_map = {
+                    "=": "$eq",
+                    "!=": "$ne",
+                    ">": "$gt",
+                    "<": "$lt",
+                    ">=": "$gte",
+                    "<=": "$lte"
+                }
+                mongo_operator = operator_map.get(operator)
+                if mongo_operator:
+                    try:
+                        # Convert numeric values
+                        value = int(value)
+                    except ValueError:
+                        pass
+                    query["filter"] = {field: {mongo_operator: value}}
+            else:
+                query["filter"] = {"$expr": {"$eq": [True, condition]}}  # fallback
 
         # Handle aggregation pipeline for joins
         if joins:
