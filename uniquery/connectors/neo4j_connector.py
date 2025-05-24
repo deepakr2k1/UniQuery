@@ -10,28 +10,31 @@ class Neo4jConnector():
             self.driver.close()
 
     def run_query(self, query):
-        with self.driver.session() as session:
-            result = session.run(query)
-            records = [record.data() for record in result]
+        try:
+            with self.driver.session() as session:
+                result = session.run(query)
+                records = [record.data() for record in result]
 
-            if not records:
-                print("\n No records found.")
-                return
+                if not records:
+                    return None
 
-            # Flatten if the result is nested
-            flat_records = []
-            for record in records:
-                flat = {}
-                for key, value in record.items():
-                    if isinstance(value, dict):
-                        # Flatten nested dictionary
-                        for sub_key, sub_value in value.items():
-                            flat[sub_key] = sub_value
-                    else:
-                        flat[key] = value
-                flat_records.append(flat)
+                # Flatten if the result is nested
+                flat_records = []
+                for record in records:
+                    flat = {}
+                    for key, value in record.items():
+                        if isinstance(value, dict):
+                            # Flatten nested dictionary
+                            for sub_key, sub_value in value.items():
+                                flat[sub_key] = sub_value
+                        else:
+                            flat[key] = value
+                    flat_records.append(flat)
 
-            headers = flat_records[0].keys()
-            rows = [list(r.values()) for r in flat_records]
+                headers = flat_records[0].keys()
+                rows = [list(r.values()) for r in flat_records]
 
-            return tabulate(rows, headers=headers, tablefmt="fancy_grid")
+                return tabulate(rows, headers=headers, tablefmt="fancy_grid")
+
+        except Exception as err:
+            raise Exception(f"Neo4j Error: {str(err)}")

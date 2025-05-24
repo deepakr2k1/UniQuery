@@ -1,16 +1,18 @@
+import json
 from typing import Any
 
 from uniquery.query_engine.translators import QueryTranslator
+from uniquery.utils import DatabaseType
 
 
 class QueryEngine:
 
-    def __init__(self, db_type, connector, is_native_mode = False, output_format = "TABULAR"):
-        self.db_type = db_type
+    def __init__(self, database_type: DatabaseType, connector, is_native_mode = False, output_format = "TABULAR"):
+        self.database_type = database_type
         self.connector = connector
         self.is_native_mode = is_native_mode
         self.output_format = output_format
-        self.translator = QueryTranslator(db_type)
+        self.translator = QueryTranslator(database_type)
 
     def set_is_native_mode(self, is_native_mode: bool) -> None:
         self.is_native_mode = is_native_mode
@@ -19,13 +21,23 @@ class QueryEngine:
         # Handle valid op formats
         self.output_format = output_format
 
-    def execute_query(self, query: str) -> Any:
-        if not self.connector:
-            raise ValueError("No active connection available")
-
-        if not self.is_native_mode:
-            query = self.translator.translate(query)
-
-        result = self.connector.run_query(query)
-
+    def format_result(self, result: Any) -> str:
         return result
+
+    def execute_query(self, query: str) -> Any:
+        try:
+            if not self.connector:
+                raise Exception("No active connection available")
+
+            if not self.is_native_mode:
+                query = self.translator.translate(query)
+            else:
+                if self.database_type.is_mql():
+                    query = json.loads(query)
+
+            result = self.connector.run_query(query)
+
+            return self.format_result(result)
+
+        except Exception as err:
+            raise Exception(f"Error executing query: {err}")

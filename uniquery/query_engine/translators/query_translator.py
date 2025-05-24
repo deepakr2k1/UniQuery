@@ -1,21 +1,26 @@
 from .query_generator import QueryGenerator
 from uniquery.query_engine.translators.sql_parser import SqlParser
+from ...utils import DatabaseType
 
 
 class QueryTranslator:
-    def __init__(self, target_format):
+    def __init__(self, database_type: DatabaseType):
         self.sql_parser = SqlParser()
         self.query_generator = QueryGenerator()
-        self.target_format = target_format
+        self.database_type = database_type
 
     def translate(self, sql_query: str):
-        parsed_data = self.sql_parser.parse(sql_query)
-        match self.target_format:
-            case "mysql":
+        try:
+            parsed_data = self.sql_parser.parse(sql_query)
+
+            if self.database_type.is_sql():
                 return sql_query
-            case "neo4j":
-                return self.query_generator.get_cypher_query(parsed_data)
-            case "mongodb":
+            elif self.database_type.is_mql():
                 return self.query_generator.get_mongodb_query(parsed_data)
-            case _:
-                raise ValueError(f"Unsupported target format: {self.target_format}")
+            elif self.database_type.is_cypher():
+                return self.query_generator.get_cypher_query(parsed_data)
+
+            raise Exception(f"Translation is not supported for database type: {self.database_type.value}")
+
+        except Exception as err:
+            raise Exception(f"Error Translating SQL query: {err}")

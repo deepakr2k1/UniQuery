@@ -1,5 +1,8 @@
 from sqlglot import expressions as exp, parse_one
 
+from uniquery.utils import Console
+
+
 class SqlParser:
 
     def extract_tables(self, expression):
@@ -36,9 +39,9 @@ class SqlParser:
                         "target_alias": join.this.alias_or_name
                     })
                 else:
-                    print(f"Warning: RELATION() in ON clause has fewer than 2 arguments: {relation_args}")
+                    raise Exception(f"Warning: RELATION() in ON clause has fewer than 2 arguments: {relation_args}")
             else:
-                print(f"Unsupported or missing ON clause format: {on_expr}")
+                raise Exception(f"Unsupported or missing ON clause format: {on_expr}")
         return joins
 
 
@@ -81,19 +84,22 @@ class SqlParser:
 
 
     def parse(self, sql_query):
-        expression = parse_one(sql_query)
-        tables = self.extract_tables(expression)
-        joins = self.extract_relationship_joins(expression)
-        where_clause = self.extract_where_conditions(expression)
-        return_fields, is_distinct = self.extract_return_fields(expression)
-        order_by_clause = self.extract_order_by(expression)
-        limit_clause = self.extract_limit(expression)
-        return {
-            "tables": tables,
-            "joins": joins,
-            "where_clause": where_clause,
-            "return_fields": return_fields,
-            "is_distinct": is_distinct,
-            "order_by_clause": order_by_clause,
-            "limit_clause": limit_clause
-        }
+        try:
+            expression = parse_one(sql_query)
+            tables = self.extract_tables(expression)
+            joins = self.extract_relationship_joins(expression)
+            where_clause = self.extract_where_conditions(expression)
+            return_fields, is_distinct = self.extract_return_fields(expression)
+            order_by_clause = self.extract_order_by(expression)
+            limit_clause = self.extract_limit(expression)
+            return {
+                "tables": tables,
+                "joins": joins,
+                "where_clause": where_clause,
+                "return_fields": return_fields,
+                "is_distinct": is_distinct,
+                "order_by_clause": order_by_clause,
+                "limit_clause": limit_clause
+            }
+        except Exception as e:
+            raise Exception(f"Error parsing SQL query: {e}")

@@ -2,10 +2,10 @@ from pyfiglet import Figlet
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
-import sys
 from uniquery.cli import TOOL_DESCRIPTION
+from uniquery.utils import Console
 
-def display_welcome_screen(console):
+def display_welcome_screen():
     try:
         project_info = {
             "name": "UniQuery",
@@ -18,17 +18,15 @@ def display_welcome_screen(console):
         figlet_text = figlet.renderText('Uni Query')
         figlet_text_obj = Text(figlet_text, style="green", justify="center")
 
-        if sys.stdin.isatty():
-            console.clear()
-        console.print(figlet_text_obj)
-        console.print(Panel(project_info['description'], title="Project Description", subtitle=project_info['version']))
+        Console.out(figlet_text_obj)
+        Console.out(Panel(project_info['description'], title="Project Description", subtitle=project_info['version']))
 
         table = Table(title="\nProject Details", show_header=False, header_style="bold magenta")
         table.add_column("Key", style="magenta", no_wrap=True)
         table.add_column("Value", style="green")
         for key, value in project_info.items():
             table.add_row(key.title(), value)
-        console.print(table)
+        Console.out(table)
 
     except Exception:
-        print("UI initialization failed.")
+        Console.error("UI initialization failed.")

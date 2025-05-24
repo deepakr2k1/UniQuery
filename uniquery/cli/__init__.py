@@ -7,8 +7,8 @@ converting queries between different database languages adnd execute them agains
 configured databases..
 """
 
-TOOL_DESCRIPTION = """UniQuery seamlessly transforms SQL queries into Cypher, document, key-value, and other database query languages, 
-enabling unified access to diverse database systems through an intuitive interface."""
+TOOL_DESCRIPTION = ("UniQuery seamlessly transforms SQL queries into Cypher, document, key-value, and other database query languages, "
+                    "enabling unified access to diverse database systems through an intuitive interface.")
 
 TOOL_SHORT_DESCRIPTION = "Transform SQL into native queries for seamless access across different database types."
 
@@ -20,8 +20,8 @@ AVAILABLE_COMMANDS_INFO = f"""Available commands:
     alias use <alias>                     - Connect to a configured database alias
     <query>                               - Execute SQL or native query
     set_native <true|false>               - Enable/disable native query mode
-    set_output <tabular|json>             - Set query output format
-    info                                  - Show command help and usage
+    set_output <tabular|json|raw>         - Set query output format
+    info, help                            - Show command help and usage
     exit, quit, Ctrl+D                    - Exit the application
 """
 

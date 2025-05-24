@@ -1,46 +1,52 @@
 import json
 import os
 from typing import Dict, Optional
+
 from uniquery.connection_details_manager import ALIAS_CONNECTION_DETAILS_PATH
+from uniquery.utils import Console
 
 class ConnectionDetailsManager:
-    def __init__(self, config_file: str = ALIAS_CONNECTION_DETAILS_PATH):
-        self.config_file = config_file
-        self.configs: Dict[str, dict] = {}
-        self.load_configs()
+    def __init__(self, filepath: str = ALIAS_CONNECTION_DETAILS_PATH):
+        self.filepath = filepath
+        self.connection_details: Dict[str, dict] = {}
+        self.load_connection_details()
 
     # Load configurations from the config file
-    def load_configs(self) -> None:
-        if os.path.exists(self.config_file):
+    def load_connection_details(self) -> None:
+        if os.path.exists(self.filepath):
             try:
-                with open(self.config_file, 'r') as f:
-                    self.configs = json.load(f)
+                with open(self.filepath, 'r') as f:
+                    self.connection_details = json.load(f)
             except json.JSONDecodeError:
-                print(f"Error: Invalid JSON in {self.config_file}")
-                self.configs = {}
+                Console.error(f"Invalid JSON in {self.filepath}")
+                self.connection_details = {}
         else:
-            self.configs = {}
+            self.connection_details = {}
 
     # List all database configurations
-    def list_configs(self) -> Dict[str, dict]:
-        return self.configs
+    def list_connections(self) -> Dict[str, dict]:
+        return self.connection_details
 
     # Get a database configuration by alias
-    def get_config(self, alias: str) -> Optional[dict]:
-        return self.configs.get(alias)
+    def get_connection(self, alias: str) -> Optional[dict]:
+        return self.connection_details.get(alias)
 
     # Add or update a database configuration
-    def add_config(self, alias: str, config: dict) -> None:
-        self.configs[alias] = config
-        self.save_configs()
+    def add_connection(self, alias: str, config: dict) -> None:
+        self.connection_details[alias] = config
+        self.save_connection_details()
 
     # Remove a database configuration
-    def remove_config(self, alias: str) -> None:
-        if alias in self.configs:
-            del self.configs[alias]
-            self.save_configs()
+    def remove_connection(self, alias: str) -> None:
+        if alias in self.connection_details:
+            del self.connection_details[alias]
+            self.save_connection_details()
 
     # Save configurations to the config file
-    def save_configs(self) -> None:
-        with open(self.config_file, 'w') as f:
-            json.dump(self.configs, f, indent=4)
+    def save_connection_details(self) -> None:
+        try:
+            with open(self.filepath, 'w') as f:
+                json.dump(self.connection_details, f, indent=4)
+        except json.JSONDecodeError:
+            Console.error(f"Error in saving to {self.filepath}")
+            self.connection_details = {}

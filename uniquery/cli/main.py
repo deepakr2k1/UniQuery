@@ -1,24 +1,22 @@
 import cmd
 import shlex
 
-from rich.console import Console
 from rich.text import Text
 
 from uniquery.connection_details_manager import ConnectionDetailsManager
 from uniquery.cli.welcome_screen import display_welcome_screen
 from uniquery.cli import AVAILABLE_COMMANDS_INFO, ALIAS_SUBCOMMANDS_INFO
 from uniquery.cli.alias_actions import list_aliases, add_alias, edit_alias, delete_alias, use_alias
+from uniquery.utils import Console
 
 class UniQueryCLI(cmd.Cmd):
     def __init__(self):
         super().__init__()
-        self.console = Console(width=100)
-
         self._setup_cli()
         self._init_state()
 
     def _setup_cli(self):
-        display_welcome_screen(self.console)
+        display_welcome_screen()
         self.prompt = "UniQuery > "
 
     def _init_state(self):
@@ -27,11 +25,14 @@ class UniQueryCLI(cmd.Cmd):
         self.active_connection = {}
 
     def do_info(self, arg):
-        self.console.print(Text(AVAILABLE_COMMANDS_INFO), style='blue')
+        Console.info(AVAILABLE_COMMANDS_INFO)
+
+    def do_help(self, arg):
+        self.do_info(arg)
 
     def do_alias(self, arg):
         if not arg:
-            self.console.print(Text(ALIAS_SUBCOMMANDS_INFO), style='yellow')
+            Console.warn(ALIAS_SUBCOMMANDS_INFO)
             return
 
         # Split the input safely (handles quoted args)
@@ -50,15 +51,15 @@ class UniQueryCLI(cmd.Cmd):
             case 'use':
                 use_alias(self, parts[1])
             case _:
-                self.console.print(Text(ALIAS_SUBCOMMANDS_INFO), style='yellow')
+                Console.warn(ALIAS_SUBCOMMANDS_INFO)
 
     def do_exit(self, arg):
         """Exit the CLI"""
         # Close all active connections
-        for connection in self.connections.values():
-            connection['connector'].close()
-        self.connections.clear()
-        print("Exiting Hybrid CLI.")
+        if self.active_connection.get('connector') is not None:
+            self.active_connection['connector'].close()
+        self.active_connection.clear()
+        Console.out("Exiting UniQuery!")
         return True
 
     def do_EOF(self, arg):
