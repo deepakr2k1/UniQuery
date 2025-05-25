@@ -1,11 +1,33 @@
-"""
-UniQuery CLI
-===========
+from enum import Enum
 
-This module provides a command-line interface for managing database configurations and
-converting queries between different database languages adnd execute them against the
-configured databases..
-"""
+class DatabaseType(Enum):
+    MYSQL = "mysql"
+    POSTGRE_SQL = "postgresql"
+    ORACLE = "oracle"
+    SQL_SERVER = "sqlserver"
+    MONGO_DB = "mongodb"
+    NEO4J = "neo4j"
+
+    @classmethod
+    def from_str(cls, value: str):
+        try:
+            return cls(value.lower())
+        except ValueError:
+            raise Exception(f"Unsupported database type: {value}")
+
+    def is_sql(self):
+        return (
+                self == DatabaseType.MYSQL or
+                self == DatabaseType.POSTGRE_SQL or
+                self == DatabaseType.ORACLE or
+                self == DatabaseType.SQL_SERVER
+        )
+
+    def is_mql(self):
+        return self == DatabaseType.MONGO_DB
+
+    def is_cypher(self):
+        return self == DatabaseType.NEO4J
 
 TOOL_DESCRIPTION = ("UniQuery seamlessly transforms SQL queries into Cypher, document, key-value, and other database query languages, "
                     "enabling unified access to diverse database systems through an intuitive interface.")
@@ -45,8 +67,4 @@ ALIAS_CONNECTION_OPTIONS_INFO = """Expected connection options:
     --database : Database name (optional)
 """
 
-from .main import UniQueryCLI
-from .welcome_screen import display_welcome_screen
-from .alias_actions import list_aliases
-
-__all__ = ['UniQueryCLI', 'display_welcome_screen']
+ALIAS_CONNECTION_DETAILS_PATH = 'alias_connection_details.json'

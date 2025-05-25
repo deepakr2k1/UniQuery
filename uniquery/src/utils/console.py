@@ -1,5 +1,4 @@
 from rich.console import Console as _console
-from rich.panel import Panel
 from rich.text import Text
 
 

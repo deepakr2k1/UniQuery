@@ -1,9 +1,8 @@
 import json
 from typing import Any
 
-from uniquery.query_engine.translators import QueryTranslator
-from uniquery.utils import DatabaseType
-
+from ..utils import DatabaseType
+from .translators import QueryTranslator
 
 class QueryEngine:
 
@@ -34,6 +33,8 @@ class QueryEngine:
             else:
                 if self.database_type.is_mql():
                     query = json.loads(query)
+
+            print(f"Translated MQL query: {query}")
 
             result = self.connector.run_query(query)
 

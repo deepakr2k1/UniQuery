@@ -2,8 +2,7 @@ import json
 import os
 from typing import Dict, Optional
 
-from uniquery.connection_details_manager import ALIAS_CONNECTION_DETAILS_PATH
-from uniquery.utils import Console
+from ..utils import Console, ALIAS_CONNECTION_DETAILS_PATH
 
 class ConnectionDetailsManager:
     def __init__(self, filepath: str = ALIAS_CONNECTION_DETAILS_PATH):

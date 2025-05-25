@@ -1,5 +1,7 @@
-from uniquery.connectors import MongoDBConnector, MySQLConnector, Neo4jConnector
-from uniquery.utils.constants import DatabaseType
+from .mysql_connector import MySQLConnector
+from .mongodb_connector import MongoDBConnector
+from .neo4j_connector import Neo4jConnector
+from ..utils.constants import DatabaseType
 
 def get_connection(connection_details):
     try:

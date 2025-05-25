@@ -1,8 +1,5 @@
 from sqlglot import expressions as exp, parse_one
 
-from uniquery.utils import Console
-
-
 class SqlParser:
 
     def extract_tables(self, expression):
@@ -43,6 +40,15 @@ class SqlParser:
             else:
                 raise Exception(f"Unsupported or missing ON clause format: {on_expr}")
         return joins
+
+
+    def extract_group_by_fields(self, expression):
+        group_expr = expression.args.get("group")
+        group_fields = []
+        if group_expr:
+            for e in group_expr.expressions:
+                group_fields.append(e.sql())
+        return group_fields
 
 
     def extract_where_conditions(self, expression):
@@ -88,6 +94,7 @@ class SqlParser:
             expression = parse_one(sql_query)
             tables = self.extract_tables(expression)
             joins = self.extract_relationship_joins(expression)
+            group_by_fields = self.extract_group_by_fields(expression)
             where_clause = self.extract_where_conditions(expression)
             return_fields, is_distinct = self.extract_return_fields(expression)
             order_by_clause = self.extract_order_by(expression)
@@ -95,6 +102,7 @@ class SqlParser:
             return {
                 "tables": tables,
                 "joins": joins,
+                "group_by_fields": group_by_fields,
                 "where_clause": where_clause,
                 "return_fields": return_fields,
                 "is_distinct": is_distinct,

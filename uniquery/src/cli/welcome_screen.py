@@ -2,8 +2,8 @@ from pyfiglet import Figlet
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
-from uniquery.cli import TOOL_DESCRIPTION
-from uniquery.utils import Console
+
+from ..utils import Console, TOOL_DESCRIPTION
 
 def display_welcome_screen():
     try:

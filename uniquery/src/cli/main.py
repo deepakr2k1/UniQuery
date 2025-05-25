@@ -1,13 +1,10 @@
 import cmd
 import shlex
 
-from rich.text import Text
-
-from uniquery.connection_details_manager import ConnectionDetailsManager
-from uniquery.cli.welcome_screen import display_welcome_screen
-from uniquery.cli import AVAILABLE_COMMANDS_INFO, ALIAS_SUBCOMMANDS_INFO
-from uniquery.cli.alias_actions import list_aliases, add_alias, edit_alias, delete_alias, use_alias
-from uniquery.utils import Console
+from ..connection_details_manager import ConnectionDetailsManager
+from ..utils import Console, AVAILABLE_COMMANDS_INFO, ALIAS_SUBCOMMANDS_INFO
+from .welcome_screen import display_welcome_screen
+from .alias_actions import list_aliases, add_alias, edit_alias, delete_alias, use_alias
 
 class UniQueryCLI(cmd.Cmd):
     def __init__(self):

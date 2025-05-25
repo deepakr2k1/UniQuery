@@ -1,12 +1,9 @@
 import argparse
-
 from rich.table import Table
 
-from uniquery.cli import NO_ALIAS_FOUND, ALIAS_CONNECTION_OPTIONS_INFO
-from uniquery.connectors import Neo4jConnector, MySQLConnector, MongoDBConnector, get_connection
-from uniquery.query_engine.main import QueryEngine
-from uniquery.utils import Console, DatabaseType
-
+from ..connectors import get_connection, MySQLConnector, MongoDBConnector, Neo4jConnector
+from ..query_engine.main import QueryEngine
+from ..utils import Console, DatabaseType, NO_ALIAS_FOUND, ALIAS_CONNECTION_OPTIONS_INFO
 
 def list_aliases(self):
     configs = self.connection_details_manager.list_connections()
@@ -139,7 +136,6 @@ def print_alias_connection_details(self, alias, connection_details):
     Console.out(connection_details_table)
 
 
-# Add Database Alias
 def add_alias(self, alias, args):
     existing_connection_details = self.connection_details_manager.get_connection(alias)
     if existing_connection_details:
