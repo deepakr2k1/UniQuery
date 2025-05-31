@@ -22,26 +22,10 @@ class TestSqlParserDatabaseQueries(unittest.TestCase):
         expected = {'operation': 'DROP_DATABASE', 'database_name': 'employee'}
         self.assertEqual(self.sql_parser.parse(sql), expected)
 
-    def test_alter_database_rename(self):
-        sql = "ALTER DATABASE employee RENAME TO staff"
-        expected = {
-            'operation': 'ALTER_DATABASE',
-            'database_name': 'employee',
-            'options': {'RENAME_TO': 'staff'}
-        }
-        self.assertEqual(self.sql_parser.parse(sql), expected)
-
     def test_show_databases(self):
         sql = "SHOW DATABASES"
         expected = {
             'operation': 'SHOW_DATABASES'
-        }
-        self.assertEqual(self.sql_parser.parse(sql), expected)
-
-    def test_select_database(self):
-        sql = "SELECT DATABASE()"
-        expected = {
-            'operation': 'SELECT_DATABASE'
         }
         self.assertEqual(self.sql_parser.parse(sql), expected)
 

@@ -1,4 +1,4 @@
-from sqlglot import expressions as exp, parse_one
+from sqlglot import expressions as exp, parse_one, TokenType
 
 class SqlParser:
 
@@ -92,6 +92,89 @@ class SqlParser:
     def parse(self, sql_query):
         try:
             expression = parse_one(sql_query)
+
+            if isinstance(expression, exp.Create):
+                if expression.kind == 'DATABASE':
+                    database_name = expression.this.this.this
+                    return { 'operation': 'CREATE_DATABASE', 'database_name': database_name }
+                if expression.kind == 'TABLE':
+                    table_name = expression.this.this.this.this
+                    columns = []
+                    for col_def in expression.this.expressions:
+                        if isinstance(col_def, exp.ColumnDef):
+                            col_name = col_def.this.this
+                            col_type = col_def.kind.this.name
+                            columns.append({"name": col_name, "type": col_type})
+
+                    return {
+                        "command": "CREATE_TABLE",
+                        "name": table_name,
+                        "columns": columns
+                    }
+
+            if isinstance(expression, exp.Alter):
+                if expression.kind == 'TABLE':
+                    table_name = expression.this.this.this
+                    columns = []
+
+                    for action in expression.actions:
+                        if isinstance(action, exp.ColumnDef):  # ADD COLUMN
+                            col_name = action.this.this
+                            col_type = action.kind.this.name
+                            default_value = None
+                            if hasattr(action, "constraints"):
+                                for constraint in action.constraints:
+                                    if hasattr(constraint, "kind") and constraint.kind.__class__.__name__ == "DefaultColumnConstraint":
+                                        default_value = constraint.kind.this.this
+                            columns.append({
+                                "name": col_name,
+                                "type": col_type,
+                                "default_value": default_value,
+                                "action": "ADD"
+                            })
+
+                        elif isinstance(action, exp.Drop):  # DROP COLUMN
+                            if action.kind == TokenType.COLUMN:
+                                for col in action.expressions:
+                                    col_name = col.this.name  # `col` is a Column, `col.this` is an Identifier
+                                    columns.append({
+                                        "name": col_name,
+                                        "action": "DROP"
+                                    })
+                    result = {
+                        "command": "ALTER_TABLE",
+                        "name": table_name,
+                        "columns": columns
+                    }
+                    return result
+
+            if isinstance(expression, exp.Drop):
+                if expression.kind == 'DATABASE':
+                    database_name = expression.this.this.this
+                    return {
+                        'operation': 'DROP_DATABASE',
+                        'database_name': database_name
+                    }
+
+            if isinstance(expression, exp.Use):
+                database_name = expression.this.this.this
+                return {
+                    'operation': 'USE_DATABASE',
+                    'database_name': database_name
+                }
+
+            if isinstance(expression, exp.Command):
+                cmd_part = [part for part in expression.expression.this.split(" ") if part.strip()]
+                print(cmd_part)
+                command = expression.this.upper()
+                if command == 'SHOW':
+                    if len(cmd_part) == 1 and cmd_part[0].upper() == 'DATABASES':
+                        return {'operation': 'SHOW_DATABASES'}
+                    if len(cmd_part) == 2 and cmd_part[0].upper() == 'TABLE':
+                        return {'operation': 'SHOW_TABLE', 'table_name': cmd_part[1]}
+                    else:
+                        raise Exception(f"Unsupported SHOW command")
+
             tables = self.extract_tables(expression)
             joins = self.extract_relationship_joins(expression)
             group_by_fields = self.extract_group_by_fields(expression)
@@ -99,6 +182,7 @@ class SqlParser:
             return_fields, is_distinct = self.extract_return_fields(expression)
             order_by_clause = self.extract_order_by(expression)
             limit_clause = self.extract_limit(expression)
+
             return {
                 "tables": tables,
                 "joins": joins,
