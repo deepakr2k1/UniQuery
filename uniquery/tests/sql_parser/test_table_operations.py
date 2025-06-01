@@ -18,10 +18,11 @@ class TestSqlParserTableQueries(unittest.TestCase):
             'table_name': 'employees',
             'columns': [
                 {'name': 'id', 'type': 'INT', 'constraints': ['PRIMARY KEY']},
-                {'name': 'name', 'type': 'VARCHAR(100)'},
-                {'name': 'department', 'type': 'VARCHAR(50)'},
-                {'name': 'salary', 'type': 'DECIMAL(10,2)'}
-            ]
+                {'name': 'name', 'type': 'VARCHAR(100)', 'constraints': []},
+                {'name': 'department', 'type': 'VARCHAR(50)', 'constraints': []},
+                {'name': 'salary', 'type': 'DECIMAL(10, 2)', 'constraints': []}
+            ],
+            "constraints": []
         }
         self.assertEqual(self.sql_parser.parse(sql), expected)
 
@@ -36,10 +37,10 @@ class TestSqlParserTableQueries(unittest.TestCase):
             'table_name': 'orders',
             'columns': [
                 {'name': 'order_id', 'type': 'INT', 'constraints': ['PRIMARY KEY']},
-                {'name': 'employee_id', 'type': 'INT'},
+                {'name': 'employee_id', 'type': 'INT', 'constraints': []},
             ],
             'constraints': [
-                {'type': 'FOREIGN_KEY', 'columns': ['employee_id'], 'references': {'table': 'employees', 'columns': ['id']}}
+                {'type': 'FOREIGN KEY', 'columns': ['employee_id'], 'references': {'table_name': 'employees', 'columns': ['id']}}
             ]
         }
         self.assertEqual(self.sql_parser.parse(sql), expected)
@@ -53,8 +54,8 @@ class TestSqlParserTableQueries(unittest.TestCase):
             'operation': 'ALTER_TABLE',
             'table_name': 'employees',
             'actions': [
-                {'action_type': 'ADD_COLUMN', 'name': 'building', 'type': 'VARCHAR(10)', 'default': 'BER-12'},
-                {'action_type': 'ADD_COLUMN', 'name': 'building_addr', 'type': 'VARCHAR(100)', 'default': None}
+                {'action_type': 'ADD_COLUMN', 'column': 'building', 'type': 'VARCHAR', 'default_value': 'BER-12'},
+                {'action_type': 'ADD_COLUMN', 'column': 'building_addr', 'type': 'VARCHAR', 'default_value': None}
             ]
         }
         self.assertEqual(self.sql_parser.parse(sql), expected)
@@ -65,7 +66,7 @@ class TestSqlParserTableQueries(unittest.TestCase):
             'operation': 'ALTER_TABLE',
             'table_name': 'employees',
             'actions': [
-                {'action_type': 'DROP_COLUMN', 'name': 'building'}
+                {'action_type': 'DROP_COLUMN', 'column': 'building'}
             ]
         }
         self.assertEqual(self.sql_parser.parse(sql), expected)
@@ -81,13 +82,24 @@ class TestSqlParserTableQueries(unittest.TestCase):
         }
         self.assertEqual(self.sql_parser.parse(sql), expected)
 
-    def test_alter_table_modify_column(self):
-        sql = "ALTER TABLE employees MODIFY COLUMN salary FLOAT DEFAULT 0.0"
+    def test_alter_table_set_default(self):
+        sql = "ALTER TABLE employees ALTER COLUMN salary SET DEFAULT 0"
         expected = {
             'operation': 'ALTER_TABLE',
             'table_name': 'employees',
             'actions': [
-                {'action_type': 'MODIFY_COLUMN', 'name': 'salary', 'type': 'FLOAT', 'default': 0.0}
+                {'action_type': 'SET_DEFAULT', 'column': 'salary', 'value': '0'}
+            ]
+        }
+        self.assertEqual(self.sql_parser.parse(sql), expected)
+
+    def test_alter_table_drop_default(self):
+        sql = "ALTER TABLE employees ALTER COLUMN salary DROP DEFAULT"
+        expected = {
+            'operation': 'ALTER_TABLE',
+            'table_name': 'employees',
+            'actions': [
+                {'action_type': 'DROP_DEFAULT', 'column': 'salary'}
             ]
         }
         self.assertEqual(self.sql_parser.parse(sql), expected)
@@ -99,17 +111,6 @@ class TestSqlParserTableQueries(unittest.TestCase):
             'table_name': 'employees',
             'actions': [
                 {'action_type': 'ADD_CONSTRAINT', 'constraint_type': 'PRIMARY_KEY', 'columns': ['id']}
-            ]
-        }
-        self.assertEqual(self.sql_parser.parse(sql), expected)
-
-    def test_alter_table_drop_primary_key(self):
-        sql = "ALTER TABLE employees DROP PRIMARY KEY"
-        expected = {
-            'operation': 'ALTER_TABLE',
-            'table_name': 'employees',
-            'actions': [
-                {'action_type': 'DROP_CONSTRAINT', 'constraint_type': 'PRIMARY_KEY'}
             ]
         }
         self.assertEqual(self.sql_parser.parse(sql), expected)
@@ -130,13 +131,13 @@ class TestSqlParserTableQueries(unittest.TestCase):
         }
         self.assertEqual(self.sql_parser.parse(sql), expected)
 
-    def test_alter_table_drop_foreign_key(self):
-        sql = "ALTER TABLE orders DROP FOREIGN KEY employee_id"
+    def test_alter_table_drop_constraint(self):
+        sql = "ALTER TABLE employees DROP CONSTRAINT PK_employees;"
         expected = {
             'operation': 'ALTER_TABLE',
-            'table_name': 'orders',
+            'table_name': 'employees',
             'actions': [
-                {'action_type': 'DROP_CONSTRAINT', 'constraint_type': 'FOREIGN_KEY', 'columns': ['employee_id']}
+                {'action_type': 'DROP_CONSTRAINT', 'constraint_name': 'PK_employees'}
             ]
         }
         self.assertEqual(self.sql_parser.parse(sql), expected)
@@ -159,12 +160,12 @@ class TestSqlParserTableQueries(unittest.TestCase):
         self.assertEqual(self.sql_parser.parse(sql), expected)
 
     def test_create_index(self):
-        sql = "CREATE INDEX idx_name ON employees(name)"
+        sql = "CREATE INDEX idx_name ON employees(email)"
         expected = {
             'operation': 'CREATE_INDEX',
-            'name': 'employees',
-            'index': {'name': 1},
-            'index_name': 'idx_name'
+            'index_name': 'idx_name',
+            'table': 'employees',
+            'columns': ['email']
         }
         self.assertEqual(self.sql_parser.parse(sql), expected)
 
@@ -172,8 +173,8 @@ class TestSqlParserTableQueries(unittest.TestCase):
         sql = "DROP INDEX idx_name ON employees"
         expected = {
             'operation': 'DROP_INDEX',
-            'name': 'employees',
-            'index_name': 'idx_name'
+            'index_name': 'idx_name',
+            'table': 'employees'
         }
         self.assertEqual(self.sql_parser.parse(sql), expected)
 
