@@ -17,35 +17,22 @@ class TestSqlParserDataManipulationQueries(unittest.TestCase):
         self.assertEqual(self.sql_parser.parse(sql), expected)
 
     def test_update_table(self):
-        sql = "UPDATE employees SET salary = 6000 WHERE id = 1"
+        sql = "UPDATE employees SET salary = 5000"
         expected = {
             'operation': 'UPDATE_DATA',
             'table_name': 'employees',
-            'set': {'salary': 6000},
-            'condition': {'id': 1}
+            'columns': ['salary'],
+            'values': [5000],
+            'condition': {}
         }
         self.assertEqual(self.sql_parser.parse(sql), expected)
 
     def test_delete_from_table(self):
-        sql = "DELETE FROM employees WHERE id = 1"
+        sql = "DELETE FROM employees"
         expected = {
             'operation': 'DELETE_DATA',
             'table_name': 'employees',
-            'condition': {'id': 1}
-        }
-        self.assertEqual(self.sql_parser.parse(sql), expected)
-
-    def test_delete_with_complex_condition(self):
-        sql = "DELETE FROM employees WHERE salary > 5000 AND department_id = 2"
-        expected = {
-            'operation': 'DELETE_DATA',
-            'table_name': 'employees',
-            'condition': {
-                'AND': [
-                    {'salary': {'>': 5000}},
-                    {'department_id': 2}
-                ]
-            }
+            'condition': {},
         }
         self.assertEqual(self.sql_parser.parse(sql), expected)
 

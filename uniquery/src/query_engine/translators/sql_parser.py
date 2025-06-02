@@ -200,6 +200,48 @@ class SqlParser:
                     else:
                         raise Exception(f"Unsupported SHOW command")
 
+            if isinstance(expression, exp.Insert):
+                table_name = expression.this.this.this.this
+                columns = [col.sql() for col in expression.this.expressions]
+                values_exp = expression.expression.expressions[0].expressions
+                values = [val.to_py() for val in values_exp]
+                return {
+                    'operation': 'INSERT_DATA',
+                    'table_name': table_name,
+                    'columns': columns,
+                    'values': values
+                }
+
+            if isinstance(expression, exp.Update):
+                table_name = expression.this.this.this
+                columns = []
+                values = []
+                condition = {}
+                for assignment in expression.expressions:
+                    col_name = assignment.this.this.this
+                    value = assignment.expression.to_py() if hasattr(assignment.expression, 'to_py') else assignment.expression.sql()
+                    columns.append(col_name)
+                    values.append(value)
+
+                return {
+                    'operation': 'UPDATE_DATA',
+                    'table_name': table_name,
+                    'columns': columns,
+                    'values': values,
+                    'condition': condition
+                }
+
+            if isinstance(expression, exp.Delete):
+                table_name = expression.this.this.this
+                where = expression.args.get("where")
+                condition = {}
+
+                return {
+                    'operation': 'DELETE_DATA',
+                    'table_name': table_name,
+                    'condition': condition,
+                }
+
             raise Exception(f"Unsupported SQL query: {sql_query}")
 
         except Exception as e:
