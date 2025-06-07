@@ -190,24 +190,30 @@ class TestSqlParserDataReadQueries(unittest.TestCase):
         sql = "SELECT department, COUNT(*) FROM employees GROUP BY department"
         expected = {
             'operation': 'SELECT',
-            'columns': [{'name': 'department'}, {'aggregation': 'COUNT', 'column': '*'}],
-            'table': {'name': 'employees'},
-            'group_by': ['department']
+            'table': {'name': 'employees', 'alias': 'employees'},
+            'columns': [
+                {'name': 'department', 'alias': None},
+                {'aggregation_function': 'COUNT', 'column': '*', 'alias': None}
+            ],
+            'aggregate': ['department']
         }
         self.assertEqual(self.sql_parser.parse(sql), expected)
 
-    def test_select_with_aggregation_and_having(self):
-        sql = "SELECT department, SUM(salary) FROM employees GROUP BY department HAVING SUM(salary) > 100000"
+    def test_select_with_aggregation_with_having(self):
+        sql = "SELECT department, SUM(salary) FROM employees GROUP BY department HAVING SUM(salary) > 1000"
         expected = {
             'operation': 'SELECT',
-            'columns': [{'name': 'department'}, {'aggregation': 'SUM', 'column': 'salary'}],
-            'table': {'name': 'employees'},
-            'group_by': ['department'],
+            'table': {'name': 'employees', 'alias': 'employees'},
+            'columns': [
+                {'name': 'department', 'alias': None},
+                {'aggregation_function': 'SUM', 'column': 'salary', 'alias': None}
+            ],
+            'aggregate': ['department'],
             'having': {
-                'aggregation': 'SUM',
+                'aggregation_function': 'SUM',
                 'column': 'salary',
                 'operator': '>',
-                'value': 100000
+                'value': 1000
             }
         }
         self.assertEqual(self.sql_parser.parse(sql), expected)

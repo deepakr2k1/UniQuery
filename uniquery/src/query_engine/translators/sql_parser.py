@@ -9,6 +9,7 @@ _OPERATOR_MAP = {
     exp.LT: '<',
     exp.LTE: '<=',
     exp.Like: 'LIKE',
+    exp.Sum: 'SUM'
 }
 
 def extract_details_from_reference(node):
@@ -61,17 +62,23 @@ def extract_group_by_fields(expression):
     if group_expr:
         for e in group_expr.expressions:
             group_fields.append(e.sql())
-    return group_fields
+    having = extract_having_conditions(expression)
+    return group_fields, having
+
+def extract_having_conditions(expression):
+    having_expr = expression.args.get("having")
+    return _parse_condition(having_expr.this) if (having_expr and having_expr.this)  else None
 
 
 def extract_where_conditions(expression):
     where_expr = expression.args.get("where")
     return _parse_condition(where_expr.this) if (where_expr and where_expr.this)  else None
 
+
 def _parse_condition(expr):
     if isinstance(expr, (exp.And, exp.Or)):
         return {
-            "operator": expr.key.upper(),  # "AND" or "OR"
+            "operator": expr.key.upper(),
             "operands": [_parse_condition(arg) for arg in expr.flatten()]
         }
     elif isinstance(expr, exp.Not):
@@ -82,42 +89,33 @@ def _parse_condition(expr):
     elif isinstance(expr, exp.Paren):
         return _parse_condition(expr.this)
     elif isinstance(expr, exp.Is):
-        column = expr.this.name if hasattr(expr.this, "name") else expr.this.sql()
+        column = expr.this.sql()
         return {
             "operator": "IS_NULL",
             "column": column
         }
     elif isinstance(expr, exp.In):
-        column = expr.this.name if hasattr(expr.this, "name") else expr.this.sql()
-        values = []
-        for val_expr in expr.expressions:
-            if isinstance(val_expr, exp.Literal):
-                values.append(_literal(val_expr))
-            else:
-                values.append(val_expr.sql())
+        column = expr.this.sql()
+        values = [_literal(val) for val in expr.expressions]
         return {
             "operator": "IN",
             "column": column,
             "values": values
         }
     elif isinstance(expr, exp.Between):
-        column = expr.this.name if hasattr(expr.this, "name") else expr.this.sql()
-        low = _literal(expr.args.get('low'))
-        high = _literal(expr.args.get('high'))
-
         return {
             'operator': 'BETWEEN',
-            'column': column,
-            'low': low,
-            'high': high
+            'column': expr.this.sql(),
+            'low': _literal(expr.args['low']),
+            'high': _literal(expr.args['high'])
         }
-    elif isinstance(expr, (exp.EQ, exp.NEQ, exp.GT, exp.GTE, exp.LT, exp.LTE, exp.Like)):
-        operator = _OPERATOR_MAP[type(expr)]
+    elif type(expr) in _OPERATOR_MAP:
         return {
-                "column": _extract_name(expr.left),
-                "operator": operator,
-                "value": _literal(expr.right)
-            }
+            "aggregation_function": expr.left.sql_name().upper(),
+            "column": _extract_name(expr.left.this),
+            "operator": _OPERATOR_MAP[type(expr)],
+            "value": _literal(expr.right)
+        }
     else:
         return expr.sql()
 
@@ -154,6 +152,13 @@ def extract_return_fields(expression):
                     'name': '*',
                     'alias': None
                 })
+            if isinstance(expr, exp.Func):
+                fields.append({
+                    "aggregation_function": expr.sql().split('(')[0] if expr.sql() else None,
+                    "column": expr.this.sql() if expr.this else None,
+                    "alias": expr.alias_or_name if expr.alias else None
+                })
+
     return fields, is_distinct
 
 
@@ -427,8 +432,8 @@ class SqlParser:
                 where_clause = extract_where_conditions(expression)
                 order_by_clause = extract_order_by(expression)
                 limit_clause = extract_limit(expression)
+                aggregate, having = extract_group_by_fields(expression)
                 joins = extract_relationship_joins(expression)
-                group_by_fields = extract_group_by_fields(expression)
 
                 select_obj = {
                     'operation': 'SELECT',
@@ -442,6 +447,12 @@ class SqlParser:
                     select_obj['order_by'] = order_by_clause
                 if limit_clause:
                     select_obj['limit'] = limit_clause
+                if aggregate:
+                    select_obj['aggregate'] = aggregate
+                if having:
+                    select_obj['having'] = having
+                if joins:
+                    select_obj['joins'] = joins
                 return select_obj
 
             raise Exception(f"Unsupported SQL query: {sql_query}")
