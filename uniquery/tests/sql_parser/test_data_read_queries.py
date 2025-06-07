@@ -10,29 +10,29 @@ class TestSqlParserDataReadQueries(unittest.TestCase):
         sql = "SELECT * FROM employees"
         expected = {
             'operation': 'SELECT',
-            'columns': [{'name': '*'}],
-            'table': {'name': 'employees'}
+            'table': {'name': 'employees', 'alias': 'employees'},
+            'columns': [{'name': '*', 'alias': None}]
         }
         self.assertEqual(self.sql_parser.parse(sql), expected)
 
     def test_select_specific_columns(self):
-        sql = "SELECT id, name FROM employees"
+        sql = "SELECT _id AS id, name FROM employees"
         expected = {
             'operation': 'SELECT',
-            'columns': [{'name': 'id'}, {'name': 'name'}],
-            'table': {'name': 'employees'}
+            'table': {'name': 'employees', 'alias': 'employees'},
+            'columns': [{'name': '_id', 'alias': 'id'}, {'name': 'name', 'alias': None}]
         }
         self.assertEqual(self.sql_parser.parse(sql), expected)
 
     def test_select_with_table_alias(self):
-        sql = "SELECT e.id, e.name FROM employees e"
+        sql = "SELECT emp.id as Id, emp.name AS Name FROM employees emp"
         expected = {
             'operation': 'SELECT',
+            'table': {'name': 'employees','alias': 'emp'},
             'columns': [
-                {'name': 'e.id', 'alias': 'Id'},
-                {'name': 'e.name', 'alias': 'Name'}
-            ],
-            'table': {'name': 'employees','alias': 'e'}
+                {'name': 'emp.id', 'alias': 'Id'},
+                {'name': 'emp.name', 'alias': 'Name'}
+            ]
         }
         self.assertEqual(self.sql_parser.parse(sql), expected)
 
@@ -40,26 +40,139 @@ class TestSqlParserDataReadQueries(unittest.TestCase):
         sql = "SELECT * FROM employees WHERE department = 'Sales'"
         expected = {
             'operation': 'SELECT',
-            'columns': [{'name': '*'}],
-            'table': {'name': 'employees'},
-            'where': {
-                'column': 'department',
+            'table': {'name': 'employees', 'alias': 'employees'},
+            'columns': [{'name': '*', 'alias': None}],
+            'filter': {
                 'operator': '=',
+                'column': 'department',
                 'value': 'Sales'
             }
         }
         self.assertEqual(self.sql_parser.parse(sql), expected)
 
-    def test_select_with_order_by(self):
-        sql = "SELECT name FROM employees ORDER BY salary DESC"
+    def test_select_with_where_clause_multiple_conditions(self):
+        sql = "SELECT * FROM employees WHERE (department = 'Marketing' OR department = 'Sales') AND salary > 5000"
         expected = {
             'operation': 'SELECT',
-            'columns': [{'name': 'name'}],
-            'table': {'name': 'employees'},
-            'order_by': {
-                'column': 'salary',
-                'order': 'DESC'
+            'table': {'name': 'employees', 'alias': 'employees'},
+            'columns': [{'name': '*', 'alias': None}],
+            'filter': {
+                'operator': 'AND',
+                'operands': [
+                    {
+                        'operator': 'OR',
+                        'operands': [
+                            {
+                                'operator': '=',
+                                'column': 'department',
+                                'value': 'Marketing'
+                            },
+                            {
+                                'operator': '=',
+                                'column': 'department',
+                                'value': 'Sales'
+                            }
+                        ]
+
+                    },
+                    {
+                        'operator': '>',
+                        'column': 'salary',
+                        'value': 5000
+                    },
+                ]
             }
+        }
+        self.assertEqual(self.sql_parser.parse(sql), expected)
+
+    def test_select_with_like(self):
+        sql = "SELECT * FROM employees WHERE name LIKE '%Art _'"
+        expected = {
+            'operation': 'SELECT',
+            'table': {'name': 'employees', 'alias': 'employees'},
+            'columns': [{'name': '*', 'alias': None}],
+            'filter': {
+                'operator': 'LIKE',
+                'column': 'name',
+                'value': '%Art _'
+            }
+        }
+        self.assertEqual(self.sql_parser.parse(sql), expected)
+
+    def test_select_with_in(self):
+        sql = "SELECT * FROM employees WHERE name IN ('Alice', 'Bob')"
+        expected = {
+            'operation': 'SELECT',
+            'table': {'name': 'employees', 'alias': 'employees'},
+            'columns': [{'name': '*', 'alias': None}],
+            'filter': {
+                'operator': 'IN',
+                'column': 'name',
+                'values': ['Alice', 'Bob']
+            }
+        }
+        self.assertEqual(self.sql_parser.parse(sql), expected)
+
+    def test_select_with_range_check(self):
+        sql = "SELECT * FROM employees WHERE salary BETWEEN 3000 AND 6000"
+        expected = {
+            'operation': 'SELECT',
+            'table': {'name': 'employees', 'alias': 'employees'},
+            'columns': [{'name': '*', 'alias': None}],
+            'filter': {
+                'operator': 'BETWEEN',
+                'column': 'salary',
+                'low': 3000,
+                'high': 6000
+            }
+        }
+        self.assertEqual(self.sql_parser.parse(sql), expected)
+
+    def test_select_with_null_check(self):
+        sql = "SELECT * FROM employees WHERE name IS NULL"
+        expected = {
+            'operation': 'SELECT',
+            'table': {'name': 'employees', 'alias': 'employees'},
+            'columns': [{'name': '*', 'alias': None}],
+            'filter': {
+                'operator': 'IS_NULL',
+                'column': 'name'
+            }
+        }
+        self.assertEqual(self.sql_parser.parse(sql), expected)
+
+    def test_select_with_not_null_check(self):
+        sql = "SELECT * FROM employees WHERE name IS NOT NULL"
+        expected = {
+            'operation': 'SELECT',
+            'table': {'name': 'employees', 'alias': 'employees'},
+            'columns': [{'name': '*', 'alias': None}],
+            'filter': {
+                'operator': 'NOT',
+                'operand': {
+                    'operator': 'IS_NULL',
+                    'column': 'name'
+                }
+            }
+        }
+        self.assertEqual(self.sql_parser.parse(sql), expected)
+
+    def test_select_with_order_by(self):
+        sql = "SELECT * FROM employees ORDER BY id ASC, salary DESC"
+        expected = {
+            'operation': 'SELECT',
+            'table': {'name': 'employees', 'alias': 'employees'},
+            'columns': [{'name': '*', 'alias': None}],
+            'order_by': [
+                {
+                    'column': 'id',
+                    'order': 'ASC'
+                },
+                {
+                    'column': 'salary',
+                    'order': 'DESC'
+                },
+            ]
         }
         self.assertEqual(self.sql_parser.parse(sql), expected)
 
@@ -67,8 +180,8 @@ class TestSqlParserDataReadQueries(unittest.TestCase):
         sql = "SELECT * FROM employees LIMIT 5"
         expected = {
             'operation': 'SELECT',
-            'columns': [{'name': '*'}],
-            'table': {'name': 'employees'},
+            'table': {'name': 'employees', 'alias': 'employees'},
+            'columns': [{'name': '*', 'alias': None}],
             'limit': 5
         }
         self.assertEqual(self.sql_parser.parse(sql), expected)
@@ -95,48 +208,6 @@ class TestSqlParserDataReadQueries(unittest.TestCase):
                 'column': 'salary',
                 'operator': '>',
                 'value': 100000
-            }
-        }
-        self.assertEqual(self.sql_parser.parse(sql), expected)
-
-    def test_select_with_greater_than(self):
-        sql = "SELECT * FROM employees WHERE salary > 50000"
-        expected = {
-            'operation': 'SELECT',
-            'columns': [{'name': '*'}],
-            'table': {'name': 'employees'},
-            'where': {
-                'column': 'salary',
-                'operator': '>',
-                'value': 50000
-            }
-        }
-        self.assertEqual(self.sql_parser.parse(sql), expected)
-
-    def test_select_with_less_than(self):
-        sql = "SELECT * FROM employees WHERE salary < 30000"
-        expected = {
-            'operation': 'SELECT',
-            'columns': [{'name': '*'}],
-            'table': {'name': 'employees'},
-            'where': {
-                'column': 'salary',
-                'operator': '<',
-                'value': 30000
-            }
-        }
-        self.assertEqual(self.sql_parser.parse(sql), expected)
-
-    def test_select_with_like(self):
-        sql = "SELECT * FROM employees WHERE name LIKE 'A%'"
-        expected = {
-            'operation': 'SELECT',
-            'columns': [{'name': '*'}],
-            'table': {'name': 'employees'},
-            'where': {
-                'column': 'name',
-                'operator': 'LIKE',
-                'value': 'A%'
             }
         }
         self.assertEqual(self.sql_parser.parse(sql), expected)

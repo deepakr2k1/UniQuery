@@ -1,12 +1,191 @@
 from sqlglot import expressions as exp, parse_one, TokenType
 from pprint import pprint
 
+_OPERATOR_MAP = {
+    exp.EQ: '=',
+    exp.NEQ: '!=',
+    exp.GT: '>',
+    exp.GTE: '>=',
+    exp.LT: '<',
+    exp.LTE: '<=',
+    exp.Like: 'LIKE',
+}
+
 def extract_details_from_reference(node):
     fk_columns = [c.this for c in node.args["expressions"]]
     ref_table = node.args["reference"].this.this.this.this
     ref_columns = [c.sql() for c in node.args["reference"].this.expressions]
     return fk_columns, ref_table, ref_columns
 
+def extract_table(expression):
+    from_expr = expression.args.get("from")
+    table = {}
+    if from_expr:
+        table['label'] = from_expr.this.name
+        table['alias'] = from_expr.this.alias_or_name
+    return table
+
+
+def extract_relationship_joins(expression):
+    joins = []
+    for join in expression.find_all(exp.Join):
+        on_expr = join.args.get("on")
+        if isinstance(on_expr, exp.Anonymous) and on_expr.name.lower() == "relation":
+            relation_args = on_expr.expressions
+            if len(relation_args) >= 2:
+                raw_relation = relation_args[0].sql().strip().replace("'", "").replace('"', '')
+
+                # Replace ' OR ' / 'or' with |
+                relation_part = raw_relation.replace(" OR ", "|").replace(" or ", "|")
+
+                # Cypher allows depth inside [] if there is a pattern like FRIEND*1..3
+                # No extra wrapping needed, as Cypher syntax expects: :FRIEND*1..3
+                alias_name = relation_args[1].sql()
+
+                joins.append({
+                    "relationship": relation_part,
+                    "alias": alias_name,
+                    "target_table": join.this.name,
+                    "target_alias": join.this.alias_or_name
+                })
+            else:
+                raise Exception(f"Warning: RELATION() in ON clause has fewer than 2 arguments: {relation_args}")
+        else:
+            raise Exception(f"Unsupported or missing ON clause format: {on_expr}")
+    return joins
+
+
+def extract_group_by_fields(expression):
+    group_expr = expression.args.get("group")
+    group_fields = []
+    if group_expr:
+        for e in group_expr.expressions:
+            group_fields.append(e.sql())
+    return group_fields
+
+
+def extract_where_conditions(expression):
+    where_expr = expression.args.get("where")
+    return _parse_condition(where_expr.this) if (where_expr and where_expr.this)  else None
+
+def _parse_condition(expr):
+    if isinstance(expr, (exp.And, exp.Or)):
+        return {
+            "operator": expr.key.upper(),  # "AND" or "OR"
+            "operands": [_parse_condition(arg) for arg in expr.flatten()]
+        }
+    elif isinstance(expr, exp.Not):
+        return {
+            "operator": "NOT",
+            "operand": _parse_condition(expr.this)
+        }
+    elif isinstance(expr, exp.Paren):
+        return _parse_condition(expr.this)
+    elif isinstance(expr, exp.Is):
+        column = expr.this.name if hasattr(expr.this, "name") else expr.this.sql()
+        return {
+            "operator": "IS_NULL",
+            "column": column
+        }
+    elif isinstance(expr, exp.In):
+        column = expr.this.name if hasattr(expr.this, "name") else expr.this.sql()
+        values = []
+        for val_expr in expr.expressions:
+            if isinstance(val_expr, exp.Literal):
+                values.append(_literal(val_expr))
+            else:
+                values.append(val_expr.sql())
+        return {
+            "operator": "IN",
+            "column": column,
+            "values": values
+        }
+    elif isinstance(expr, exp.Between):
+        column = expr.this.name if hasattr(expr.this, "name") else expr.this.sql()
+        low = _literal(expr.args.get('low'))
+        high = _literal(expr.args.get('high'))
+
+        return {
+            'operator': 'BETWEEN',
+            'column': column,
+            'low': low,
+            'high': high
+        }
+    elif isinstance(expr, (exp.EQ, exp.NEQ, exp.GT, exp.GTE, exp.LT, exp.LTE, exp.Like)):
+        operator = _OPERATOR_MAP[type(expr)]
+        return {
+                "column": _extract_name(expr.left),
+                "operator": operator,
+                "value": _literal(expr.right)
+            }
+    else:
+        return expr.sql()
+
+def _extract_name(node):
+    return node.sql()
+
+def _literal(node):
+    if isinstance(node, exp.Literal):
+        return node.to_py()
+    elif isinstance(node, exp.Identifier):
+        return node.name  # For identifiers like column names
+    elif hasattr(node, "this"):
+        return node.this
+    return node.sql()
+
+def extract_return_fields(expression):
+    select_exprs = expression.args.get("expressions")
+    is_distinct = expression.args.get("distinct", False)
+    fields = []
+    if select_exprs:
+        for expr in select_exprs:
+            if isinstance(expr, exp.Column):
+                fields.append({
+                    'name': expr.this.sql(),
+                    'alias': None
+                })
+            elif isinstance(expr, exp.Alias):
+                fields.append({
+                    'name': expr.this.sql(),
+                    'alias': expr.alias_or_name
+                })
+            elif isinstance(expr, exp.Star):
+                fields.append({
+                    'name': '*',
+                    'alias': None
+                })
+    return fields, is_distinct
+
+
+def extract_order_by(expression):
+    order_expr = expression.args.get("order")
+    if not order_expr:
+        return None
+
+    order_items = []
+    for e in order_expr.expressions:
+        if isinstance(e, exp.Ordered):
+            order_items.append({
+                "column": e.this.name if hasattr(e.this, "name") else e.this.sql(),
+                "order": "DESC" if e.args.get("desc") else "ASC"
+            })
+        else:
+            order_items.append({
+                "column": e.sql(),
+                "order": "ASC"
+            })
+    return order_items
+
+
+def extract_limit(expression):
+    """
+    Extracts the LIMIT value from a SQL expression.
+    Returns the limit as an integer or string, or None if not present.
+    """
+    limit_expr = expression.args.get("limit")
+    if limit_expr and hasattr(limit_expr, "this"):
+        return _literal(limit_expr['this'].this.args['expression'])
+    return None
 
 class SqlParser:
 
@@ -241,6 +420,29 @@ class SqlParser:
                     'table_name': table_name,
                     'condition': condition,
                 }
+
+            if isinstance(expression, exp.Select):
+                table = extract_table(expression)
+                return_fields, is_distinct = extract_return_fields(expression)
+                where_clause = extract_where_conditions(expression)
+                order_by_clause = extract_order_by(expression)
+                limit_clause = extract_limit(expression)
+                joins = extract_relationship_joins(expression)
+                group_by_fields = extract_group_by_fields(expression)
+
+                select_obj = {
+                    'operation': 'SELECT',
+                    'table': {'name': table['label'], 'alias': table['alias']},
+                    'columns': return_fields
+                }
+
+                if where_clause:
+                    select_obj['filter'] = where_clause
+                if order_by_clause:
+                    select_obj['order_by'] = order_by_clause
+                if limit_clause:
+                    select_obj['limit'] = limit_clause
+                return select_obj
 
             raise Exception(f"Unsupported SQL query: {sql_query}")
 
