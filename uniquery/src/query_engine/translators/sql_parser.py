@@ -35,7 +35,6 @@ def extract_relationship_joins(expression):
     for join in expression.find_all(exp.Join):
         join_type = join.kind.upper() if join.kind else "INNER"
         table_expr = join.this
-        pprint(table_expr)
         on_expr = join.args.get("on")
 
         if isinstance(on_expr, exp.Condition) or isinstance(on_expr, exp.EQ):
@@ -112,20 +111,17 @@ def _parse_condition(expr):
         if type(expr.this) in _AGGREGATION_FUNCTION_MAP:
             return {
                 "aggregation_function": expr.left.sql_name().upper(),
-                "column": _extract_name(expr.left.this),
+                "column": expr.left.this.sql(),
                 "operator": _OPERATOR_MAP[type(expr)],
                 "value": _literal(expr.right)
             }
         return {
-            "column": _extract_name(expr.left.this),
+            "column": expr.left.sql(),
             "operator": _OPERATOR_MAP[type(expr)],
             "value": _literal(expr.right)
         }
     else:
         return expr.sql()
-
-def _extract_name(node):
-    return node.sql()
 
 def _literal(node):
     if isinstance(node, exp.Literal):
@@ -144,7 +140,7 @@ def extract_return_fields(expression):
         for expr in select_exprs:
             if isinstance(expr, exp.Column):
                 fields.append({
-                    'name': expr.this.sql(),
+                    'name': expr.sql(),
                     'alias': None
                 })
             elif isinstance(expr, exp.Alias):

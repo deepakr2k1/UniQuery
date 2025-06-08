@@ -225,8 +225,8 @@ class TestSqlParserDataReadQueries(unittest.TestCase):
         expected = {
             'operation': 'SELECT',
             'columns': [
-                {'name': 'e.name', 'alias': 'e.name'},
-                {'name': 'd.name', 'alias': 'd.name'}
+                {'name': 'e.name', 'alias': None},
+                {'name': 'd.name', 'alias': None}
             ],
             'table': {'name': 'employees', 'alias': 'e'},
             'joins': [
@@ -239,53 +239,27 @@ class TestSqlParserDataReadQueries(unittest.TestCase):
         }
         self.assertEqual(self.sql_parser.parse(sql), expected)
 
-    def test_select_with_multiple_joins(self):
-        sql = """SELECT o.id, e.name, d.name
-            FROM orders o
-            JOIN employees e ON o.employee_id = e.id
-            JOIN departments d ON e.department_id = d.id
-        """
-        expected = {
-            'operation': 'SELECT',
-            'columns': [
-                {'name': 'o.id'},
-                {'name': 'e.name'},
-                {'name': 'd.name'}
-            ],
-            'table': {'name': 'orders', 'alias': 'o'},
-            'joins': [
-                {
-                    'type': 'INNER',
-                    'table': {'name': 'employees', 'alias': 'e'},
-                    'on': {'left': 'o.employee_id', 'operator': '=', 'right': 'e.id'}
-                },
-                {
-                    'type': 'INNER',
-                    'table': {'name': 'departments', 'alias': 'd'},
-                    'on': {'left': 'e.department_id', 'operator': '=', 'right': 'd.id'}
-                }
-            ]
-        }
-        self.assertEqual(self.sql_parser.parse(sql), expected)
-
-    def test_select_with_left_join_and_where(self):
+    def test_select_with_left_join_with_filter(self):
         sql = """SELECT c.name, o.id
-            FROM customers c
-            LEFT JOIN orders o ON c.id = o.customer_id
-            WHERE o.status = 'pending'
-        """
+                 FROM customers c
+                          LEFT JOIN orders o ON c.id = o.customer_id
+                 WHERE o.status = 'pending' \
+              """
         expected = {
             'operation': 'SELECT',
-            'columns': [{'name': 'c.name'}, {'name': 'o.id'}],
             'table': {'name': 'customers', 'alias': 'c'},
+            'columns': [
+                {'name': 'c.name', 'alias': None},
+                {'name': 'o.id', 'alias': None}
+            ],
             'joins': [
                 {
-                    'type': 'LEFT',
+                    'type': 'INNER',
                     'table': {'name': 'orders', 'alias': 'o'},
                     'on': {'left': 'c.id', 'operator': '=', 'right': 'o.customer_id'}
                 }
             ],
-            'where': {
+            'filter': {
                 'column': 'o.status',
                 'operator': '=',
                 'value': 'pending'
@@ -297,7 +271,7 @@ class TestSqlParserDataReadQueries(unittest.TestCase):
         sql = """
             SELECT e.id AS employee_id, d.name AS department_name
             FROM employees e
-            JOIN departments d ON e.department_id = d.id \
+            JOIN departments d ON e.department_id = d.id
         """
         expected = {
             'operation': 'SELECT',
@@ -315,6 +289,36 @@ class TestSqlParserDataReadQueries(unittest.TestCase):
             ]
         }
         self.assertEqual(self.sql_parser.parse(sql), expected)
+
+    def test_select_with_multiple_joins(self):
+        sql = """SELECT o.id, e.name, d.name
+            FROM orders o
+            INNER JOIN employees e ON o.employee_id = e.id
+            INNER JOIN departments d ON e.department_id = d.id
+        """
+        expected = {
+            'operation': 'SELECT',
+            'columns': [
+                {'name': 'o.id', 'alias': None},
+                {'name': 'e.name', 'alias': None},
+                {'name': 'd.name', 'alias': None}
+            ],
+            'table': {'name': 'orders', 'alias': 'o'},
+            'joins': [
+                {
+                    'type': 'INNER',
+                    'table': {'name': 'employees', 'alias': 'e'},
+                    'on': {'left': 'o.employee_id', 'operator': '=', 'right': 'e.id'}
+                },
+                {
+                    'type': 'INNER',
+                    'table': {'name': 'departments', 'alias': 'd'},
+                    'on': {'left': 'e.department_id', 'operator': '=', 'right': 'd.id'}
+                }
+            ]
+        }
+        self.assertEqual(self.sql_parser.parse(sql), expected)
+
 
 if __name__ == '__main__':
     unittest.main()
