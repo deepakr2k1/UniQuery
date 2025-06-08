@@ -2,8 +2,8 @@ import unittest
 
 from uniquery.src.query_engine.translators.query_generator import get_mongodb_query
 
-class TestMqlGenerator(unittest.TestCase):
-    # DATABASE OPERATIONS
+class TestDatabaseOperationsMqlGenerator(unittest.TestCase):
+
     def test_create_database(self):
         parsed_sql = {'operation': 'CREATE_DATABASE', 'database_name': 'employee'}
         expected_mql = {'operation': 'CREATE_DATABASE', 'database_name': 'employee'}
