@@ -1,5 +1,6 @@
+import io
+import contextlib
 from sqlglot import expressions as exp, parse_one, TokenType
-from pprint import pprint
 
 _OPERATOR_MAP = {
     exp.EQ: '=',
@@ -193,11 +194,17 @@ def extract_limit(expression):
         return _literal(limit_expr['this'].this.args['expression'])
     return None
 
+
+def parse_sql_silently(sql):
+    with contextlib.redirect_stderr(io.StringIO()):
+        return parse_one(sql)
+
+
 class SqlParser:
 
     def parse(self, sql_query):
         try:
-            expression = parse_one(sql_query)
+            expression = parse_sql_silently(sql_query)
 
             if isinstance(expression, exp.Create):
                 if expression.kind == 'DATABASE':
