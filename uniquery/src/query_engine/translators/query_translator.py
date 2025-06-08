@@ -1,6 +1,6 @@
-from ...utils import DatabaseType
-from .sql_parser import SqlParser
-from .query_generator import get_mongodb_query, get_cypher_query
+from uniquery.src.utils import DatabaseType
+from uniquery.src.query_engine.translators.sql_parser import SqlParser
+from uniquery.src.query_engine.translators.query_generator import get_mongodb_query, get_cypher_query
 
 class QueryTranslator:
     def __init__(self, database_type: DatabaseType):

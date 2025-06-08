@@ -1,8 +1,8 @@
 import json
 from typing import Any
 
-from ..utils import DatabaseType
-from .translators import QueryTranslator
+from uniquery.src.utils import DatabaseType
+from uniquery.src.query_engine.translators import QueryTranslator
 
 class QueryEngine:
 
