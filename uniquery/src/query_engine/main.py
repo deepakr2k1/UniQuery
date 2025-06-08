@@ -24,21 +24,17 @@ class QueryEngine:
         return result
 
     def execute_query(self, query: str) -> Any:
-        try:
-            if not self.connector:
-                raise Exception("No active connection available")
+        if not self.connector:
+            raise Exception("No active connection available")
 
-            if not self.is_native_mode:
-                query = self.translator.translate(query)
-            else:
-                if self.database_type.is_mql():
-                    query = json.loads(query)
+        if not self.is_native_mode:
+            query = self.translator.translate(query)
+        else:
+            if self.database_type.is_mql():
+                query = json.loads(query)
 
-            print(f"Translated MQL query: {query}")
+        print(f"Translated MQL query: {query}")
 
-            result = self.connector.run_query(query)
+        result = self.connector.run_query(query)
 
-            return self.format_result(result)
-
-        except Exception as err:
-            raise Exception(f"Error executing query: {err}")
+        return self.format_result(result)

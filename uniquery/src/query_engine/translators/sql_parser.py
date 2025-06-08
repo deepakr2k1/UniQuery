@@ -387,6 +387,8 @@ class SqlParser:
                 if command == 'SHOW':
                     if len(cmd_part) == 1 and cmd_part[0].upper() == 'DATABASES':
                         return {'operation': 'SHOW_DATABASES'}
+                    if len(cmd_part) == 1 and cmd_part[0].upper() == 'TABLES':
+                        return {'operation': 'SHOW_TABLES'}
                     if len(cmd_part) == 2 and cmd_part[0].upper() == 'TABLE':
                         return {'operation': 'SHOW_TABLE', 'table_name': cmd_part[1]}
                     else:
