@@ -109,15 +109,14 @@ def _parse_condition(expr):
             'high': _literal(expr.args['high'])
         }
     elif type(expr) in _OPERATOR_MAP:
-        pprint(expr)
+        if type(expr.this) in _AGGREGATION_FUNCTION_MAP:
+            return {
+                "aggregation_function": expr.left.sql_name().upper(),
+                "column": _extract_name(expr.left.this),
+                "operator": _OPERATOR_MAP[type(expr)],
+                "value": _literal(expr.right)
+            }
         return {
-            "column": _extract_name(expr.left.this),
-            "operator": _OPERATOR_MAP[type(expr)],
-            "value": _literal(expr.right)
-        }
-    elif type(expr) in _AGGREGATION_FUNCTION_MAP:
-        return {
-            "aggregation_function": expr.left.sql_name().upper(),
             "column": _extract_name(expr.left.this),
             "operator": _OPERATOR_MAP[type(expr)],
             "value": _literal(expr.right)
