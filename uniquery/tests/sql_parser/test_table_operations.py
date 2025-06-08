@@ -45,6 +45,21 @@ class TestSqlParserTableQueries(unittest.TestCase):
         }
         self.assertEqual(self.sql_parser.parse(sql), expected)
 
+    def test_show_tables(self):
+        sql = "SHOW TABLES"
+        expected = {
+            'operation': 'SHOW_TABLES'
+        }
+        self.assertEqual(self.sql_parser.parse(sql), expected)
+
+    def test_show_table(self):
+        sql = "SHOW TABLE employee"
+        expected = {
+            'operation': 'SHOW_TABLE',
+            'table_name': 'employee'
+        }
+        self.assertEqual(self.sql_parser.parse(sql), expected)
+
     def test_alter_table_add_column(self):
         sql = """ALTER TABLE employees
             ADD COLUMN building VARCHAR(10) DEFAULT 'BER-12',
