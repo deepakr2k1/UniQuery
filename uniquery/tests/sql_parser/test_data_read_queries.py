@@ -224,8 +224,11 @@ class TestSqlParserDataReadQueries(unittest.TestCase):
         """
         expected = {
             'operation': 'SELECT',
-            'columns': [{'name': 'e.name'}, {'name': 'd.name'}],
-            'table': {'name': 'employees'},
+            'columns': [
+                {'name': 'e.name', 'alias': 'e.name'},
+                {'name': 'd.name', 'alias': 'd.name'}
+            ],
+            'table': {'name': 'employees', 'alias': 'e'},
             'joins': [
                 {
                     'type': 'INNER',

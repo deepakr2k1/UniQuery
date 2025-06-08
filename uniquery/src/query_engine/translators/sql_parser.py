@@ -8,7 +8,10 @@ _OPERATOR_MAP = {
     exp.GTE: '>=',
     exp.LT: '<',
     exp.LTE: '<=',
-    exp.Like: 'LIKE',
+    exp.Like: 'LIKE'
+}
+
+_AGGREGATION_FUNCTION_MAP = {
     exp.Sum: 'SUM'
 }
 
@@ -30,31 +33,27 @@ def extract_table(expression):
 def extract_relationship_joins(expression):
     joins = []
     for join in expression.find_all(exp.Join):
+        join_type = join.kind.upper() if join.kind else "INNER"
+        table_expr = join.this
+        pprint(table_expr)
         on_expr = join.args.get("on")
-        if isinstance(on_expr, exp.Anonymous) and on_expr.name.lower() == "relation":
-            relation_args = on_expr.expressions
-            if len(relation_args) >= 2:
-                raw_relation = relation_args[0].sql().strip().replace("'", "").replace('"', '')
 
-                # Replace ' OR ' / 'or' with |
-                relation_part = raw_relation.replace(" OR ", "|").replace(" or ", "|")
-
-                # Cypher allows depth inside [] if there is a pattern like FRIEND*1..3
-                # No extra wrapping needed, as Cypher syntax expects: :FRIEND*1..3
-                alias_name = relation_args[1].sql()
-
-                joins.append({
-                    "relationship": relation_part,
-                    "alias": alias_name,
-                    "target_table": join.this.name,
-                    "target_alias": join.this.alias_or_name
-                })
-            else:
-                raise Exception(f"Warning: RELATION() in ON clause has fewer than 2 arguments: {relation_args}")
+        if isinstance(on_expr, exp.Condition) or isinstance(on_expr, exp.EQ):
+            joins.append({
+                "type": join_type,
+                "table": {
+                    "name": table_expr.name,
+                    "alias": table_expr.alias,
+                },
+                "on": {
+                    "left": on_expr.left.sql(),
+                    "operator": _OPERATOR_MAP.get(type(on_expr), "="),
+                    "right": on_expr.right.sql(),
+                }
+            })
         else:
-            raise Exception(f"Unsupported or missing ON clause format: {on_expr}")
+            raise ValueError(f"Unsupported ON clause format in JOIN: {on_expr}")
     return joins
-
 
 def extract_group_by_fields(expression):
     group_expr = expression.args.get("group")
@@ -110,6 +109,13 @@ def _parse_condition(expr):
             'high': _literal(expr.args['high'])
         }
     elif type(expr) in _OPERATOR_MAP:
+        pprint(expr)
+        return {
+            "column": _extract_name(expr.left.this),
+            "operator": _OPERATOR_MAP[type(expr)],
+            "value": _literal(expr.right)
+        }
+    elif type(expr) in _AGGREGATION_FUNCTION_MAP:
         return {
             "aggregation_function": expr.left.sql_name().upper(),
             "column": _extract_name(expr.left.this),
@@ -426,7 +432,7 @@ class SqlParser:
                     'condition': condition,
                 }
 
-            if isinstance(expression, exp.Select):
+            if isinstance(expression, (exp.Select, exp.Join)):
                 table = extract_table(expression)
                 return_fields, is_distinct = extract_return_fields(expression)
                 where_clause = extract_where_conditions(expression)
