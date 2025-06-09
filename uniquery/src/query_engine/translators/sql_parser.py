@@ -157,7 +157,7 @@ def extract_return_fields(expression):
             if isinstance(expr, exp.Func):
                 fields.append({
                     "aggregation_function": expr.sql().split('(')[0] if expr.sql() else None,
-                    "column": expr.this.sql() if expr.this else None,
+                    "name": expr.this.sql() if expr.this else None,
                     "alias": expr.alias_or_name if expr.alias else None
                 })
 

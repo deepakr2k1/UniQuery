@@ -193,7 +193,7 @@ class TestSqlParserDataReadQueries(unittest.TestCase):
             'table': {'name': 'employees', 'alias': 'employees'},
             'columns': [
                 {'name': 'department', 'alias': None},
-                {'aggregation_function': 'COUNT', 'column': '*', 'alias': None}
+                {'aggregation_function': 'COUNT', 'name': '*', 'alias': None}
             ],
             'aggregate': ['department']
         }
@@ -206,7 +206,7 @@ class TestSqlParserDataReadQueries(unittest.TestCase):
             'table': {'name': 'employees', 'alias': 'employees'},
             'columns': [
                 {'name': 'department', 'alias': None},
-                {'aggregation_function': 'SUM', 'column': 'salary', 'alias': None}
+                {'aggregation_function': 'SUM', 'name': 'salary', 'alias': None}
             ],
             'aggregate': ['department'],
             'having': {
