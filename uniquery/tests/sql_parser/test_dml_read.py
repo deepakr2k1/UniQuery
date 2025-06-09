@@ -254,7 +254,7 @@ class TestSqlParserDataReadQueries(unittest.TestCase):
             ],
             'joins': [
                 {
-                    'type': 'INNER',
+                    'type': 'LEFT',
                     'table': {'name': 'orders', 'alias': 'o'},
                     'on': {'left': 'c.id', 'operator': '=', 'right': 'o.customer_id'}
                 }

@@ -34,7 +34,7 @@ def extract_table(expression):
 def extract_relationship_joins(expression):
     joins = []
     for join in expression.find_all(exp.Join):
-        join_type = join.kind.upper() if join.kind else "INNER"
+        join_type = join.args['side'].upper() if join.args['side'] else "INNER"
         table_expr = join.this
         on_expr = join.args.get("on")
 

@@ -276,6 +276,33 @@ class TestTableOperationsMqlGenerator(unittest.TestCase):
         print(get_mongodb_query(parsed_sql))
         self.assertEqual(get_mongodb_query(parsed_sql), expected_mql)
 
+    def test_select_with_aggregation_with_alias(self):
+        parsed_sql = {
+            'operation': 'SELECT',
+            'table': {'name': 'employees', 'alias': 'employees'},
+            'columns': [
+                {'name': 'department', 'alias': None},
+                {'aggregation_function': 'COUNT', 'name': '*', 'alias': 'dept_count'}
+            ],
+            'aggregate': ['department']
+        }
+        expected_mql = {
+            'operation': 'AGGREGATE',
+            'collection': 'employees',
+            'pipeline': [
+                {
+                    '$group': {
+                        '_id': {
+                            'department': '$department',
+                        },
+                        'dept_count': {'$sum': 1}
+                    }
+                }
+            ]
+        }
+        print(get_mongodb_query(parsed_sql))
+        self.assertEqual(get_mongodb_query(parsed_sql), expected_mql)
+
     def test_select_with_aggregation_with_having(self):
         parsed_sql = {
             'operation': 'SELECT',
