@@ -168,21 +168,30 @@ def get_mongodb_find_query(parsed_sql):
             join_table = join['table']['name']
             join_alias = join['table'].get('alias') or join_table
             on = join.get('on', {})
-            local_field = None
-            foreign_field = None
 
-            # Parse join condition on = equality only
             left = on.get('left', '')
             right = on.get('right', '')
-            if left.startswith(base_alias + '.'):
-                local_field = left.split('.', 1)[1]
-            if right.startswith(join_alias + '.'):
-                foreign_field = right.split('.', 1)[1]
 
-            if not local_field or not foreign_field:
-                # fallback naming convention
-                local_field = f"{join_alias}_id"
-                foreign_field = "id"
+            # Initialize local and foreign fields
+            local_field = foreign_field = None
+
+            # Determine which side refers to base table and which to joined table
+            if '.' in left and '.' in right:
+                left_prefix, left_field = left.split('.', 1)
+                right_prefix, right_field = right.split('.', 1)
+
+                if left_prefix == join_alias:
+                    foreign_field = left_field
+                    if right_prefix == base_alias:
+                        local_field = right_field
+                    else:
+                        local_field = right
+                elif right_prefix == join_alias:
+                    foreign_field = right_field
+                    if left_prefix == base_alias:
+                        local_field = left_field
+                    else:
+                        local_field = left
 
             pipeline.append({
                 '$lookup': {
@@ -192,8 +201,6 @@ def get_mongodb_find_query(parsed_sql):
                     'as': join_alias
                 }
             })
-
-            print(join_type)
 
             unwind_stage = {'$unwind': f"${join_alias}"}
             if join_type == 'LEFT':
