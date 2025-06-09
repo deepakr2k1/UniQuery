@@ -108,6 +108,28 @@ class MongoDBConnector():
                     raise Exception(f"Index `{index_name}` does not exist")
                 collection.drop_index(index_name)
                 return True
+            elif operation == "INSERT_DATA":
+                table = query.get("collection")
+                documents = query.get("documents", [])
+                if table not in self.database.list_collection_names():
+                    self.database.create_collection(table)
+                result = self.database[table].insert_many(documents)
+                return result
+            elif operation == "UPDATE_DATA":
+                table = query.get("collection")
+                updates = query.get("updates", {})
+                filter_criteria = query.get("filter", {})
+                if table not in self.database.list_collection_names():
+                    raise Exception(f"Collection `{table}` does not exist")
+                result = self.database[table].update_many(filter_criteria, {"$set": updates})
+                return result
+            elif operation == "DELETE_DATA":
+                table = query.get("collection")
+                filter_criteria = query.get("filter", {})
+                if table not in self.database.list_collection_names():
+                    raise Exception(f"Collection `{table}` does not exist")
+                result = self.database[table].delete_many(filter_criteria)
+                return result
 
 
             # collection = query.get("collection")

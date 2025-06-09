@@ -12,7 +12,7 @@ class TestEngineMongo(unittest.TestCase):
             27017,
             "admin",
             "admin123",
-            "employee"
+            "test_database"
         )
         self.query_engine = QueryEngine(mongodb, self.connector, False)
 
