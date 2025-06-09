@@ -193,6 +193,8 @@ def get_mongodb_find_query(parsed_sql):
                 }
             })
 
+            print(join_type)
+
             unwind_stage = {'$unwind': f"${join_alias}"}
             if join_type == 'LEFT':
                 unwind_stage['$unwind'] = {'path': f"${join_alias}", 'preserveNullAndEmptyArrays': True}
@@ -201,13 +203,17 @@ def get_mongodb_find_query(parsed_sql):
         # After joins, project columns with aliases handled
         project_stage = {}
         for col in columns:
-            print(col)
             name = col['name']
             alias = col.get('alias')
             if '.' in name:
                 # name like e.name or d.name
-                project_key = alias or name
-                project_stage[project_key] = f"${name}"
+                prefix, field = name.split('.', 1)
+                if prefix == base_alias:
+                    project_key = alias or name
+                    project_stage[project_key] = f"${field}"  # from base collection
+                else:
+                    project_key = alias or name
+                    project_stage[project_key] = f"${prefix}.{field}"  # from joined alias
             else:
                 project_key = alias or name
                 project_stage[project_key] = 1
@@ -215,7 +221,19 @@ def get_mongodb_find_query(parsed_sql):
 
         # Apply any filter on joined data after joins as $match
         if filter_:
-            pipeline.append({'$match': filter_})
+            base_alias = parsed_sql['table'].get('alias') or parsed_sql['table']['name']
+            base_filters = {}
+
+            for key, value in filter_.items():
+                if '.' in key and key.startswith(base_alias + '.'):
+                    # Strip alias from key if present
+                    actual_key = key.split('.', 1)[1] if '.' in key else key
+                    base_filters[actual_key] = value
+                else:
+                    base_filters[key] = value
+
+            if base_filters:
+                pipeline.append({'$match': base_filters})
 
         return {
             'operation': 'AGGREGATE',

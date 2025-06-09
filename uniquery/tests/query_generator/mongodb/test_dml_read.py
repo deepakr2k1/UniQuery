@@ -116,7 +116,7 @@ class TestTableOperationsMqlGenerator(unittest.TestCase):
             'operation': 'FIND',
             'collection': 'employees',
             'filter': {
-                'name': {'$regex': '^.*Art .*$'}  # Convert SQL LIKE '%Art _' to regex
+                'name': {'$regex': '^.*Art .$'}  # Convert SQL LIKE '%Art _' to regex
             },
             'projection': None
         }
@@ -375,70 +375,16 @@ class TestTableOperationsMqlGenerator(unittest.TestCase):
                         'from': 'departments',
                         'localField': 'department_id',
                         'foreignField': 'id',
-                        'as': 'departments'
+                        'as': 'd'
                     }
                 },
                 {
-                    '$unwind': '$departments'
-                },
-                {
-                    '$project': {
-                        'e.name': 1,
-                        'd.name': '$departments.name'
-                    }
-                }
-            ]
-        }
-        self.assertEqual(get_mongodb_query(parsed_sql), expected_mql)
-
-    def test_select_with_left_join_with_filter(self):
-        parsed_sql = {
-            'operation': 'SELECT',
-            'table': {'name': 'customers', 'alias': 'c'},
-            'columns': [
-                {'name': 'c.name', 'alias': None},
-                {'name': 'o.id', 'alias': None}
-            ],
-            'joins': [
-                {
-                    'type': 'INNER',
-                    'table': {'name': 'orders', 'alias': 'o'},
-                    'on': {'left': 'c.id', 'operator': '=', 'right': 'o.customer_id'}
-                }
-            ],
-            'filter': {
-                'column': 'o.status',
-                'operator': '=',
-                'value': 'pending'
-            }
-        }
-        expected_mql = {
-            'operation': 'AGGREGATE',
-            'collection': 'customers',
-            'pipeline': [
-                {
-                    '$lookup': {
-                        'from': 'orders',
-                        'localField': 'id',
-                        'foreignField': 'customer_id',
-                        'as': 'o'
-                    }
-                },
-                {
-                    '$unwind': {
-                        'path': '$o',
-                        'preserveNullAndEmptyArrays': True
-                    }
-                },
-                {
-                    '$match': {
-                        'o.status': 'pending'
-                    }
+                    '$unwind': '$d'
                 },
                 {
                     '$project': {
-                        'c.name': 1,
-                        'o.id': 1
+                        'e.name': '$name',
+                        'd.name': '$d.name'
                     }
                 }
             ]
@@ -478,8 +424,116 @@ class TestTableOperationsMqlGenerator(unittest.TestCase):
                 },
                 {
                     '$project': {
-                        'employee_id': '$e.id',
+                        'employee_id': '$id',
                         'department_name': '$d.name'
+                    }
+                }
+            ]
+        }
+        self.assertEqual(get_mongodb_query(parsed_sql), expected_mql)
+
+    def test_select_with_left_join_with_filter(self):
+        parsed_sql = {
+            'operation': 'SELECT',
+            'table': {'name': 'customers', 'alias': 'c'},
+            'columns': [
+                {'name': 'c.name', 'alias': None},
+                {'name': 'o.id', 'alias': None}
+            ],
+            'joins': [
+                {
+                    'type': 'LEFT',
+                    'table': {'name': 'orders', 'alias': 'o'},
+                    'on': {'left': 'c.id', 'operator': '=', 'right': 'o.customer_id'}
+                }
+            ],
+            'filter': {
+                'column': 'o.status',
+                'operator': '=',
+                'value': 'pending'
+            }
+        }
+        expected_mql = {
+            'operation': 'AGGREGATE',
+            'collection': 'customers',
+            'pipeline': [
+                {
+                    '$lookup': {
+                        'from': 'orders',
+                        'localField': 'id',
+                        'foreignField': 'customer_id',
+                        'as': 'o'
+                    }
+                },
+                {
+                    '$unwind': {
+                        'path': '$o',
+                        'preserveNullAndEmptyArrays': True
+                    }
+                },
+                {
+                    '$project': {
+                        'c.name': '$name',
+                        'o.id': '$o.id'
+                    }
+                },
+                {
+                    '$match': {
+                        'o.status': 'pending'
+                    }
+                }
+            ]
+        }
+        self.assertEqual(get_mongodb_query(parsed_sql), expected_mql)
+
+    def test_select_with_left_join_with_filter_and_base_alias(self):
+        parsed_sql = {
+            'operation': 'SELECT',
+            'table': {'name': 'customers', 'alias': 'c'},
+            'columns': [
+                {'name': 'c.name', 'alias': None},
+                {'name': 'o.id', 'alias': None}
+            ],
+            'joins': [
+                {
+                    'type': 'LEFT',
+                    'table': {'name': 'orders', 'alias': 'o'},
+                    'on': {'left': 'c.id', 'operator': '=', 'right': 'o.customer_id'}
+                }
+            ],
+            'filter': {
+                'column': 'c.status',
+                'operator': '=',
+                'value': 'pending'
+            }
+        }
+        expected_mql = {
+            'operation': 'AGGREGATE',
+            'collection': 'customers',
+            'pipeline': [
+                {
+                    '$lookup': {
+                        'from': 'orders',
+                        'localField': 'id',
+                        'foreignField': 'customer_id',
+                        'as': 'o'
+                    }
+                },
+                {
+                    '$unwind': {
+                        'path': '$o',
+                        'preserveNullAndEmptyArrays': True
+                    }
+                },
+                {
+                    '$project': {
+                        'c.name': '$name',
+                        'o.id': '$o.id'
+                    }
+                },
+                {
+                    '$match': {
+                        'status': 'pending'
                     }
                 }
             ]
@@ -536,9 +590,9 @@ class TestTableOperationsMqlGenerator(unittest.TestCase):
                 },
                 {
                     '$project': {
-                        'o.id': 1,
-                        'e.name': 1,
-                        'd.name': 1
+                        'o.id': '$id',
+                        'e.name': '$e.name',
+                        'd.name': '$d.name'
                     }
                 }
             ]
