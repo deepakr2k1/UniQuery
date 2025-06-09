@@ -397,8 +397,9 @@ class SqlParser:
             if isinstance(expression, exp.Insert):
                 table_name = expression.this.this.this.this
                 columns = [col.sql() for col in expression.this.expressions]
-                values_exp = expression.expression.expressions[0].expressions
-                values = [val.to_py() for val in values_exp]
+                values = []
+                for row in expression.expression.expressions:
+                    values.append([val.to_py() for val in row.expressions])
                 return {
                     'operation': 'INSERT_DATA',
                     'table_name': table_name,

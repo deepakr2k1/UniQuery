@@ -12,7 +12,17 @@ class TestSqlParserDataManipulationQueries(unittest.TestCase):
             'operation': 'INSERT_DATA',
             'table_name': 'employees',
             'columns': ['id', 'name', 'salary'],
-            'values': [1, 'Alice', 5000]
+            'values': [[1, 'Alice', 5000]]
+        }
+        self.assertEqual(self.sql_parser.parse(sql), expected)
+
+    def test_insert_into_table_multiple_records(self):
+        sql = "INSERT INTO employees (id, name, salary) VALUES (1, 'Alice', 5000), (2, 'Bob', 6000)"
+        expected = {
+            'operation': 'INSERT_DATA',
+            'table_name': 'employees',
+            'columns': ['id', 'name', 'salary'],
+            'values': [[1, 'Alice', 5000], [2, 'Bob', 6000]]
         }
         self.assertEqual(self.sql_parser.parse(sql), expected)
 
