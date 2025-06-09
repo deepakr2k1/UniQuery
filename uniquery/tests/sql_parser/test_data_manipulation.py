@@ -17,22 +17,72 @@ class TestSqlParserDataManipulationQueries(unittest.TestCase):
         self.assertEqual(self.sql_parser.parse(sql), expected)
 
     def test_update_table(self):
-        sql = "UPDATE employees SET salary = 5000"
+        sql = "UPDATE employees SET salary = 5000 WHERE (department = 'Marketing' OR department = 'Sales') AND salary > 5000"
         expected = {
             'operation': 'UPDATE_DATA',
             'table_name': 'employees',
             'columns': ['salary'],
             'values': [5000],
-            'condition': {}
+            'filter': {
+                'operator': 'AND',
+                'operands': [
+                    {
+                        'operator': 'OR',
+                        'operands': [
+                            {
+                                'operator': '=',
+                                'column': 'department',
+                                'value': 'Marketing'
+                            },
+                            {
+                                'operator': '=',
+                                'column': 'department',
+                                'value': 'Sales'
+                            }
+                        ]
+
+                    },
+                    {
+                        'operator': '>',
+                        'column': 'salary',
+                        'value': 5000
+                    },
+                ]
+            }
         }
         self.assertEqual(self.sql_parser.parse(sql), expected)
 
     def test_delete_from_table(self):
-        sql = "DELETE FROM employees"
+        sql = "DELETE FROM employees WHERE (department = 'Marketing' OR department = 'Sales') AND salary < 5000"
         expected = {
             'operation': 'DELETE_DATA',
             'table_name': 'employees',
-            'condition': {},
+            'filter': {
+                'operator': 'AND',
+                'operands': [
+                    {
+                        'operator': 'OR',
+                        'operands': [
+                            {
+                                'operator': '=',
+                                'column': 'department',
+                                'value': 'Marketing'
+                            },
+                            {
+                                'operator': '=',
+                                'column': 'department',
+                                'value': 'Sales'
+                            }
+                        ]
+
+                    },
+                    {
+                        'operator': '<',
+                        'column': 'salary',
+                        'value': 5000
+                    },
+                ]
+            }
         }
         self.assertEqual(self.sql_parser.parse(sql), expected)
 

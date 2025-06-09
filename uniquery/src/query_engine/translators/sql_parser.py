@@ -410,7 +410,7 @@ class SqlParser:
                 table_name = expression.this.this.this
                 columns = []
                 values = []
-                condition = {}
+                filter = extract_where_conditions(expression)
                 for assignment in expression.expressions:
                     col_name = assignment.this.this.this
                     value = assignment.expression.to_py() if hasattr(assignment.expression, 'to_py') else assignment.expression.sql()
@@ -422,18 +422,17 @@ class SqlParser:
                     'table_name': table_name,
                     'columns': columns,
                     'values': values,
-                    'condition': condition
+                    'filter': filter
                 }
 
             if isinstance(expression, exp.Delete):
                 table_name = expression.this.this.this
-                where = expression.args.get("where")
-                condition = {}
+                filter = extract_where_conditions(expression)
 
                 return {
                     'operation': 'DELETE_DATA',
                     'table_name': table_name,
-                    'condition': condition,
+                    'filter': filter,
                 }
 
             if isinstance(expression, (exp.Select, exp.Join)):
