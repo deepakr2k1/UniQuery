@@ -187,13 +187,13 @@ class TestSqlParserDataReadQueries(unittest.TestCase):
         self.assertEqual(self.sql_parser.parse(sql), expected)
 
     def test_select_with_aggregation(self):
-        sql = "SELECT department, COUNT(*) FROM employees GROUP BY department"
+        sql = "SELECT department, COUNT(*) as cnt FROM employees GROUP BY department"
         expected = {
             'operation': 'SELECT',
             'table': {'name': 'employees', 'alias': 'employees'},
             'columns': [
                 {'name': 'department', 'alias': None},
-                {'aggregation_function': 'COUNT', 'name': '*', 'alias': None}
+                {'aggregation_function': 'COUNT', 'name': '*', 'alias': 'cnt'}
             ],
             'aggregate': ['department']
         }

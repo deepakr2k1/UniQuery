@@ -144,6 +144,16 @@ def extract_return_fields(expression):
                     'name': expr.sql(),
                     'alias': None
                 })
+            if isinstance(expr, exp.Func) or isinstance(expr.this, exp.Func):
+                _alias = None
+                if not isinstance(expr, exp.Func):
+                    _alias = expr.alias if expr.alias else None
+                    expr = expr.this
+                fields.append({
+                    "aggregation_function": expr.sql().split('(')[0] if expr.sql() else None,
+                    "name": expr.this.sql() if expr.this else None,
+                    "alias": _alias if _alias else expr.alias if expr.alias else None
+                })
             elif isinstance(expr, exp.Alias):
                 fields.append({
                     'name': expr.this.sql(),
@@ -153,12 +163,6 @@ def extract_return_fields(expression):
                 fields.append({
                     'name': '*',
                     'alias': None
-                })
-            if isinstance(expr, exp.Func):
-                fields.append({
-                    "aggregation_function": expr.sql().split('(')[0] if expr.sql() else None,
-                    "name": expr.this.sql() if expr.this else None,
-                    "alias": expr.alias_or_name if expr.alias else None
                 })
 
     return fields, is_distinct
