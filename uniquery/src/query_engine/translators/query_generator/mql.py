@@ -104,12 +104,12 @@ def get_mongodb_find_query(parsed_sql):
     # Projection (fields to include)
     projection = None
     if columns and not (len(columns) == 1 and columns[0]['name'] == '*'):
-        projection = {}
+        projection = {"_id": 0}
         for col in columns:
             col_name = col['name']
             alias = col.get('alias')
             if alias:
-                projection[alias] = 1
+                projection[alias] = f"${col_name}"
             else:
                 projection[col_name] = 1
 
